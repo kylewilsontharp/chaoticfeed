@@ -1,0 +1,15 @@
+{
+  "name": "chaoticfeed",
+  "version": "1.0.0",
+  "description": "A sleek chronological news feed aggregator",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "rss-parser": "^3.13.0",
+    "node-cache": "^5.1.2"
+  }
+}

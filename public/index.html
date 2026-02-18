@@ -1,0 +1,505 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ChaoticFeed</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #f9f9f8;
+      --surface: #ffffff;
+      --border: #e5e5e3;
+      --text: #1a1a1a;
+      --muted: #767676;
+      --accent: #1a1a1a;
+      --hover-bg: #f2f2f0;
+      --shadow: 0 1px 3px rgba(0,0,0,0.06);
+    }
+
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #111110;
+        --surface: #1c1c1b;
+        --border: #2e2e2c;
+        --text: #e8e8e6;
+        --muted: #888886;
+        --accent: #e8e8e6;
+        --hover-bg: #242422;
+        --shadow: 0 1px 3px rgba(0,0,0,0.3);
+      }
+    }
+
+    html { font-size: 16px; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', sans-serif;
+      line-height: 1.5;
+      min-height: 100vh;
+    }
+
+    header {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      background: var(--bg);
+      border-bottom: 1px solid var(--border);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+    }
+
+    .header-inner {
+      max-width: 720px;
+      margin: 0 auto;
+      padding: 16px 20px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+    }
+
+    .logo {
+      font-size: 1.1rem;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      color: var(--text);
+    }
+
+    .logo span {
+      opacity: 0.4;
+      font-weight: 400;
+    }
+
+    .header-right {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .last-updated {
+      font-size: 0.75rem;
+      color: var(--muted);
+    }
+
+    #refresh-btn {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      background: none;
+      border: 1px solid var(--border);
+      color: var(--muted);
+      cursor: pointer;
+      padding: 6px 12px;
+      border-radius: 6px;
+      font-size: 0.8rem;
+      font-family: inherit;
+      transition: all 0.15s ease;
+    }
+
+    #refresh-btn:hover {
+      background: var(--hover-bg);
+      color: var(--text);
+      border-color: var(--text);
+    }
+
+    #refresh-btn.loading svg {
+      animation: spin 0.8s linear infinite;
+    }
+
+    @keyframes spin {
+      from { transform: rotate(0deg); }
+      to { transform: rotate(360deg); }
+    }
+
+    main {
+      max-width: 720px;
+      margin: 0 auto;
+      padding: 24px 20px 60px;
+    }
+
+    .feed-meta {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 20px;
+    }
+
+    .feed-count {
+      font-size: 0.8rem;
+      color: var(--muted);
+    }
+
+    .author-filter {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-bottom: 24px;
+    }
+
+    .filter-btn {
+      background: none;
+      border: 1px solid var(--border);
+      color: var(--muted);
+      cursor: pointer;
+      padding: 4px 10px;
+      border-radius: 100px;
+      font-size: 0.75rem;
+      font-family: inherit;
+      transition: all 0.15s ease;
+      white-space: nowrap;
+    }
+
+    .filter-btn:hover,
+    .filter-btn.active {
+      background: var(--text);
+      color: var(--bg);
+      border-color: var(--text);
+    }
+
+    #feed {
+      display: flex;
+      flex-direction: column;
+      gap: 1px;
+    }
+
+    .article-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 16px 18px;
+      margin-bottom: 8px;
+      transition: background 0.1s ease, box-shadow 0.1s ease;
+      position: relative;
+    }
+
+    .article-card:hover {
+      background: var(--hover-bg);
+      box-shadow: var(--shadow);
+    }
+
+    .article-meta {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 8px;
+      flex-wrap: wrap;
+    }
+
+    .pub-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      font-size: 0.7rem;
+      font-weight: 600;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      padding: 2px 7px;
+      border-radius: 4px;
+      color: #fff;
+    }
+
+    .author-name {
+      font-size: 0.8rem;
+      color: var(--muted);
+      font-weight: 500;
+    }
+
+    .article-time {
+      font-size: 0.75rem;
+      color: var(--muted);
+      margin-left: auto;
+    }
+
+    .article-title {
+      font-size: 0.975rem;
+      font-weight: 500;
+      line-height: 1.4;
+      letter-spacing: -0.01em;
+    }
+
+    .article-title a {
+      color: var(--text);
+      text-decoration: none;
+    }
+
+    .article-title a:hover {
+      text-decoration: underline;
+      text-underline-offset: 3px;
+    }
+
+    /* Loading state */
+    .skeleton {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 16px 18px;
+      margin-bottom: 8px;
+    }
+
+    .skeleton-line {
+      background: linear-gradient(90deg, var(--border) 25%, var(--hover-bg) 50%, var(--border) 75%);
+      background-size: 200% 100%;
+      animation: shimmer 1.4s infinite;
+      border-radius: 4px;
+      height: 12px;
+      margin-bottom: 10px;
+    }
+
+    .skeleton-line.short { width: 30%; }
+    .skeleton-line.medium { width: 60%; }
+    .skeleton-line.long { width: 90%; }
+    .skeleton-line.title { height: 16px; }
+
+    @keyframes shimmer {
+      0% { background-position: 200% 0; }
+      100% { background-position: -200% 0; }
+    }
+
+    .error-state {
+      text-align: center;
+      padding: 48px 24px;
+      color: var(--muted);
+    }
+
+    .error-state h3 {
+      font-size: 1rem;
+      margin-bottom: 8px;
+      color: var(--text);
+    }
+
+    .empty-state {
+      text-align: center;
+      padding: 48px 24px;
+      color: var(--muted);
+      font-size: 0.9rem;
+    }
+
+    .date-divider {
+      font-size: 0.72rem;
+      font-weight: 600;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: var(--muted);
+      padding: 16px 0 8px;
+    }
+
+    @media (max-width: 480px) {
+      .article-time { display: none; }
+      .header-right .last-updated { display: none; }
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="header-inner">
+    <div class="logo">ChaoticFeed <span>/ last 7 days</span></div>
+    <div class="header-right">
+      <span class="last-updated" id="last-updated"></span>
+      <button id="refresh-btn" title="Refresh feed">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/>
+          <path d="M3 3v5h5"/>
+          <path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16"/>
+          <path d="M16 21h5v-5"/>
+        </svg>
+        Refresh
+      </button>
+    </div>
+  </div>
+</header>
+
+<main>
+  <div class="author-filter" id="author-filter"></div>
+  <div class="feed-meta">
+    <span class="feed-count" id="feed-count"></span>
+  </div>
+  <div id="feed"></div>
+</main>
+
+<script>
+  const PUBLICATION_COLORS = {
+    'New York Times': '#1a1a1a',
+    'Semafor': '#0055b3',
+    'POLITICO': '#c40000',
+    'Axios': '#e65100',
+    'Freelance': '#4b5563',
+  };
+
+  const AUTHORS = [
+    'Shane Goldmacher', 'Theodore Schleifer', 'Max Tani', 'Ben Smith',
+    'Jessica Piper', 'Zach Montellaro', 'Issie Lapowsky', 'Nancy Scola',
+    'Alex Thompson', 'Sara Fischer'
+  ];
+
+  let allArticles = [];
+  let activeFilter = null;
+
+  function formatRelativeTime(dateStr) {
+    const now = new Date();
+    const date = new Date(dateStr);
+    const diffMs = now - date;
+    const diffMins = Math.floor(diffMs / 60000);
+    const diffHours = Math.floor(diffMs / 3600000);
+    const diffDays = Math.floor(diffMs / 86400000);
+
+    if (diffMins < 60) return `${diffMins}m ago`;
+    if (diffHours < 24) return `${diffHours}h ago`;
+    return `${diffDays}d ago`;
+  }
+
+  function formatDayLabel(dateStr) {
+    const date = new Date(dateStr);
+    const today = new Date();
+    const yesterday = new Date(today);
+    yesterday.setDate(today.getDate() - 1);
+
+    if (date.toDateString() === today.toDateString()) return 'Today';
+    if (date.toDateString() === yesterday.toDateString()) return 'Yesterday';
+
+    return date.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' });
+  }
+
+  function renderFeed(articles) {
+    const feed = document.getElementById('feed');
+    const countEl = document.getElementById('feed-count');
+
+    if (!articles.length) {
+      feed.innerHTML = '<div class="empty-state">No articles found in the last 7 days.</div>';
+      countEl.textContent = '';
+      return;
+    }
+
+    countEl.textContent = `${articles.length} article${articles.length !== 1 ? 's' : ''}`;
+
+    let html = '';
+    let lastDay = null;
+
+    for (const article of articles) {
+      const dayLabel = formatDayLabel(article.date);
+      if (dayLabel !== lastDay) {
+        html += `<div class="date-divider">${dayLabel}</div>`;
+        lastDay = dayLabel;
+      }
+
+      const color = PUBLICATION_COLORS[article.publication] || '#6b7280';
+      const relTime = formatRelativeTime(article.date);
+
+      html += `
+        <div class="article-card" data-author="${article.author}">
+          <div class="article-meta">
+            <span class="pub-badge" style="background:${color}">${article.publication}</span>
+            <span class="author-name">${article.author}</span>
+            <span class="article-time">${relTime}</span>
+          </div>
+          <div class="article-title">
+            <a href="${escapeHtml(article.url)}" target="_blank" rel="noopener noreferrer">${escapeHtml(article.title)}</a>
+          </div>
+        </div>
+      `;
+    }
+
+    feed.innerHTML = html;
+  }
+
+  function escapeHtml(str) {
+    return str
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#039;');
+  }
+
+  function showSkeletons(count = 8) {
+    const feed = document.getElementById('feed');
+    feed.innerHTML = Array.from({ length: count }, () => `
+      <div class="skeleton">
+        <div class="skeleton-line short" style="margin-bottom:12px"></div>
+        <div class="skeleton-line title long"></div>
+        <div class="skeleton-line medium" style="margin-top:8px"></div>
+      </div>
+    `).join('');
+  }
+
+  function buildAuthorFilter() {
+    const container = document.getElementById('author-filter');
+    const allBtn = document.createElement('button');
+    allBtn.className = 'filter-btn active';
+    allBtn.textContent = 'All';
+    allBtn.dataset.author = '';
+    allBtn.addEventListener('click', () => setFilter(null, allBtn));
+    container.appendChild(allBtn);
+
+    for (const author of AUTHORS) {
+      const btn = document.createElement('button');
+      btn.className = 'filter-btn';
+      btn.textContent = author;
+      btn.dataset.author = author;
+      btn.addEventListener('click', () => setFilter(author, btn));
+      container.appendChild(btn);
+    }
+  }
+
+  function setFilter(author, btn) {
+    activeFilter = author || null;
+
+    document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+
+    const filtered = activeFilter
+      ? allArticles.filter(a => a.author === activeFilter)
+      : allArticles;
+
+    renderFeed(filtered);
+  }
+
+  function updateLastUpdated() {
+    const el = document.getElementById('last-updated');
+    const now = new Date();
+    el.textContent = `Updated ${now.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}`;
+  }
+
+  async function loadFeed(endpoint = '/api/feed') {
+    const btn = document.getElementById('refresh-btn');
+    btn.classList.add('loading');
+    btn.disabled = true;
+    showSkeletons();
+
+    try {
+      const res = await fetch(endpoint);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data = await res.json();
+      allArticles = data.articles || [];
+
+      const filtered = activeFilter
+        ? allArticles.filter(a => a.author === activeFilter)
+        : allArticles;
+
+      renderFeed(filtered);
+      updateLastUpdated();
+    } catch (err) {
+      document.getElementById('feed').innerHTML = `
+        <div class="error-state">
+          <h3>Could not load feed</h3>
+          <p>Check your connection and try refreshing.</p>
+        </div>
+      `;
+    } finally {
+      btn.classList.remove('loading');
+      btn.disabled = false;
+    }
+  }
+
+  document.getElementById('refresh-btn').addEventListener('click', () => {
+    loadFeed('/api/refresh');
+  });
+
+  buildAuthorFilter();
+  loadFeed();
+</script>
+</body>
+</html>
