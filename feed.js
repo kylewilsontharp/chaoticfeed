@@ -149,6 +149,13 @@ const CHAOS_QUERIES = [
   '"dark money" politics',
   '"super PAC" spending',
   '"outside spending" election 2026',
+  '"NGP VAN"',
+  '"Democratic National Committee"',
+  '"Senate Majority PAC"',
+  '"Congressional Leadership Fund"',
+  '"ActBlue"',
+  '"Future Forward"',
+  '"Data for Progress"',
 ];
 
 const OUTLET_PRIORITY = new Map([
