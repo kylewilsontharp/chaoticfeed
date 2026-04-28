@@ -24,14 +24,23 @@ const PUBLICATION_COLORS = {
   'Freelance': '#6b7280',
 };
 
+// Google News appends " - Publication Name" to titles — strip it
+function cleanTitle(raw) {
+  if (!raw) return 'Untitled';
+  return raw.replace(/\s+[-–]\s+[A-Z][^-–]{1,50}$/, '').trim() || raw;
+}
+
+// Extract the publication name from a raw Google News title
+function extractSource(raw) {
+  const match = raw.match(/[-–]\s*([A-Z][^-–]{1,50})$/);
+  return match ? match[1].trim() : '';
+}
+
 function extractSummary(raw) {
   if (!raw) return '';
-  // Strip trailing "- Publication Name" that Google News appends
   const cleaned = raw.replace(/\s*[-–]\s*[A-Z][^-–\n]*$/, '').trim();
-  // Take first sentence if it's meaningful
   const match = cleaned.match(/^[^.!?]+[.!?]/);
   if (match && match[0].length > 25) return match[0].trim();
-  // Fallback: truncate at 160 chars
   return cleaned.length > 160 ? cleaned.slice(0, 157) + '...' : cleaned;
 }
 
@@ -47,7 +56,7 @@ async function fetchArticlesForAuthor(author) {
     const pubDate = new Date(item.pubDate);
     if (isNaN(pubDate.getTime()) || pubDate < sevenDaysAgo) continue;
     articles.push({
-      title: item.title || 'Untitled',
+      title: cleanTitle(item.title || 'Untitled'),
       url: item.link || '',
       date: pubDate.toISOString(),
       author: author.name,
@@ -83,8 +92,66 @@ async function buildFeed() {
   return allArticles;
 }
 
+// Topic queries for the "More Chaos" section
+const CHAOS_QUERIES = [
+  '"partisan media"',
+  '"conservative media"',
+  '"political advertising"',
+  'midterm election polling 2026',
+  '"political data"',
+  '"campaign technology"',
+  '"media consumption"',
+  'site:pewresearch.org',
+  'site:mediamatters.org',
+  '"news media" trust OR habits OR consumption',
+];
+
+async function fetchTopicArticles(seenUrls = new Set()) {
+  const twoDaysAgo = new Date(Date.now() - 48 * 60 * 60 * 1000);
+
+  const results = await Promise.allSettled(
+    CHAOS_QUERIES.map(async (q) => {
+      const url = `https://news.google.com/rss/search?q=${encodeURIComponent(q)}&hl=en-US&gl=US&ceid=US:en`;
+      const feed = await parser.parseURL(url);
+      const articles = [];
+      for (const item of feed.items) {
+        const pubDate = new Date(item.pubDate);
+        if (isNaN(pubDate.getTime()) || pubDate < twoDaysAgo) continue;
+        const source = extractSource(item.title || '');
+        articles.push({
+          title: cleanTitle(item.title || 'Untitled'),
+          url: item.link || '',
+          date: pubDate.toISOString(),
+          author: '',
+          publication: source,
+          color: PUBLICATION_COLORS[source] || '#6b7280',
+          summary: extractSummary(item.contentSnippet || item.content || ''),
+        });
+      }
+      return articles;
+    })
+  );
+
+  const articles = [];
+  const seen = new Set(seenUrls);
+
+  for (const result of results) {
+    if (result.status === 'fulfilled') {
+      for (const article of result.value) {
+        if (article.url && !seen.has(article.url)) {
+          seen.add(article.url);
+          articles.push(article);
+        }
+      }
+    }
+  }
+
+  articles.sort((a, b) => new Date(b.date) - new Date(a.date));
+  return articles;
+}
+
 function clearCache() {
   cache.del('feed');
 }
 
-module.exports = { buildFeed, clearCache, fetchArticlesForAuthor, PUBLICATION_COLORS };
+module.exports = { buildFeed, clearCache, fetchArticlesForAuthor, fetchTopicArticles, PUBLICATION_COLORS };
