@@ -29,6 +29,7 @@ const PUBLICATION_COLORS = {
   'CNN': '#cc0000',
   'The New Yorker': '#d40000',
   'Wall Street Journal': '#0080c6',
+  'Campaigns & Elections': '#15803d',
 };
 
 function cleanTitle(raw) {
@@ -144,6 +145,9 @@ const CHAOS_QUERIES = [
   '"news media" trust OR habits OR consumption',
   '"political influencer"',
   '"influencer marketing" politics',
+  '"dark money" politics',
+  '"super PAC" spending',
+  '"outside spending" election 2026',
 ];
 
 const OUTLET_PRIORITY = new Map([

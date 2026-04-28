@@ -35,17 +35,49 @@ function articleCard(a) {
     </div>`;
 }
 
+function renderMarkdown(text) {
+  // Convert **bold** to <strong>, then escape remaining HTML-sensitive chars
+  // We escape first (to protect < > & in article titles), then unescape our bold markers
+  const BOLD_PLACEHOLDER = '\x00BOLD_OPEN\x00';
+  const BOLD_CLOSE_PLACEHOLDER = '\x00BOLD_CLOSE\x00';
+  const withPlaceholders = text
+    .replace(/\*\*(.+?)\*\*/g, `${BOLD_PLACEHOLDER}$1${BOLD_CLOSE_PLACEHOLDER}`);
+  const escaped = esc(withPlaceholders);
+  return escaped
+    .replace(new RegExp(esc(BOLD_PLACEHOLDER), 'g'), '<strong>')
+    .replace(new RegExp(esc(BOLD_CLOSE_PLACEHOLDER), 'g'), '</strong>');
+}
+
 function narrativeBlock(narrative) {
   if (!narrative) return '';
-  const paragraphs = narrative
-    .split(/\n\n+/)
-    .filter(p => p.trim())
-    .map(p => `<p style="margin:0 0 12px;font-size:14px;line-height:1.75;color:#1f2937;">${esc(p.trim())}</p>`)
-    .join('');
+
+  const lines = narrative.split('\n');
+  let html = '';
+
+  for (const raw of lines) {
+    const line = raw.trim();
+    if (!line) continue;
+
+    if (line.startsWith('- ')) {
+      // Bullet item
+      html += `<div style="margin:0 0 8px;padding-left:16px;font-size:14px;line-height:1.6;color:#1f2937;position:relative;">
+        <span style="position:absolute;left:0;color:#419EFF;">&#8226;</span>
+        ${renderMarkdown(line.slice(2))}
+      </div>`;
+    } else {
+      // Headline or label line — slightly larger if it looks like a heading
+      const isHeading = /^\*\*[^*]+\*\*$/.test(line);
+      const style = isHeading
+        ? 'margin:0 0 14px;font-size:15px;line-height:1.4;color:#0a0a0a;'
+        : 'margin:0 0 10px;font-size:14px;line-height:1.6;color:#1f2937;';
+      html += `<p style="${style}">${renderMarkdown(line)}</p>`;
+    }
+  }
+
   return `
     <div style="background:#f0f7ff;border-left:4px solid #419EFF;padding:20px 24px;margin-bottom:32px;border-radius:0 6px 6px 0;">
-      <div style="font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:0.1em;color:#419EFF;margin-bottom:12px;">Today's Briefing</div>
-      ${paragraphs}
+      <div style="font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:0.1em;color:#419EFF;margin-bottom:14px;">Today's Briefing</div>
+      ${html}
     </div>`;
 }
 
