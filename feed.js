@@ -12,9 +12,11 @@ const cache = new NodeCache({ stdTTL: 900 });
 const PUBLICATION_COLORS = {
   'New York Times': '#000000',
   'Semafor': '#0066cc',
-  'POLITICO': '#c40000',
   'Axios': '#ff6d00',
-  'Freelance': '#6b7280',
+  'UserMag': '#7c3aed',
+  'Garbage Day': '#16a34a',
+  'Status': '#0369a1',
+  'Puck': '#b45309',
 };
 
 async function fetchArticlesForAuthor(author) {
