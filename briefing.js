@@ -1,5 +1,5 @@
 const https = require('https');
-const { buildFeed, clearCache, fetchTopicArticles, fetchOpinionArticles } = require('./feed');
+const { buildFeed, clearCache, fetchTopicArticles, fetchOpinionArticles, normalizeTitle } = require('./feed');
 const { generateNarrative } = require('./summarize');
 
 const TZ = process.env.BRIEFING_TIMEZONE || 'America/New_York';
@@ -265,12 +265,13 @@ async function sendBriefing() {
   console.log(`[briefing] ${journalistArticles.length} journalist articles in the last 24h`);
 
   const seenUrls = new Set(journalistArticles.map(a => a.url));
+  const seenTitles = new Set(journalistArticles.map(a => normalizeTitle(a.title)));
   let chaosArticles = [];
   let opinionArticles = [];
   try {
     [chaosArticles, opinionArticles] = await Promise.all([
-      fetchTopicArticles(seenUrls),
-      fetchOpinionArticles(seenUrls),
+      fetchTopicArticles(seenUrls, seenTitles),
+      fetchOpinionArticles(seenUrls, seenTitles),
     ]);
     console.log(`[briefing] ${chaosArticles.length} More Chaos articles`);
     console.log(`[briefing] ${opinionArticles.length} Very Chaotic Takes`);

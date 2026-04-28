@@ -28,7 +28,7 @@ const PUBLICATION_COLORS = {
   'Silver Bulletin': '#6366f1',
   'CNN': '#cc0000',
   'The New Yorker': '#d40000',
-  'The Information': '#1a56db',
+  'Wall Street Journal': '#0080c6',
 };
 
 function cleanTitle(raw) {
@@ -39,6 +39,14 @@ function cleanTitle(raw) {
 function extractSource(raw) {
   const match = raw.match(/[-–]\s*([A-Z][^-–]{1,50})$/);
   return match ? match[1].trim() : '';
+}
+
+function normalizeTitle(t) {
+  return t.toLowerCase().replace(/[^a-z0-9\s]/g, '').replace(/\s+/g, ' ').trim();
+}
+
+function isMsnUrl(url) {
+  return /\bmsn\.com\b/i.test(url);
 }
 
 // Applies to all feeds
@@ -79,11 +87,13 @@ async function fetchArticlesForAuthor(author) {
   for (const item of feed.items) {
     const pubDate = new Date(item.pubDate);
     if (isNaN(pubDate.getTime()) || pubDate < sevenDaysAgo) continue;
+    const rawUrl = item.link || '';
+    if (isMsnUrl(rawUrl)) continue;
     const title = cleanTitle(item.title || 'Untitled');
     if (isExcluded(title)) continue;
     articles.push({
       title,
-      url: item.link || '',
+      url: rawUrl,
       date: pubDate.toISOString(),
       author: author.name,
       publication: author.publication,
@@ -100,13 +110,16 @@ async function buildFeed() {
 
   const results = await Promise.allSettled(journalists.map(fetchArticlesForAuthor));
   const allArticles = [];
-  const seen = new Set();
+  const seenUrls = new Set();
+  const seenTitles = new Set();
 
   for (const result of results) {
     if (result.status === 'fulfilled') {
       for (const article of result.value) {
-        if (!seen.has(article.url)) {
-          seen.add(article.url);
+        const norm = normalizeTitle(article.title);
+        if (!seenUrls.has(article.url) && !seenTitles.has(norm)) {
+          seenUrls.add(article.url);
+          seenTitles.add(norm);
           allArticles.push(article);
         }
       }
@@ -148,7 +161,7 @@ function outletScore(pub) {
   return OUTLET_PRIORITY.get(pub) || 5;
 }
 
-async function fetchTopicArticles(seenUrls = new Set()) {
+async function fetchTopicArticles(seenUrls = new Set(), seenTitles = new Set()) {
   const twoDaysAgo = new Date(Date.now() - 48 * 60 * 60 * 1000);
 
   const results = await Promise.allSettled(
@@ -159,15 +172,16 @@ async function fetchTopicArticles(seenUrls = new Set()) {
       for (const item of feed.items) {
         const pubDate = new Date(item.pubDate);
         if (isNaN(pubDate.getTime()) || pubDate < twoDaysAgo) continue;
+        const rawUrl = item.link || '';
+        if (isMsnUrl(rawUrl)) continue;
         const source = extractSource(item.title || '');
         const title = cleanTitle(item.title || 'Untitled');
         if (isExcluded(title) || isExcludedFromChaos(title, source)) continue;
-        // Require a detectable byline (dc:creator) — skip if clearly absent
         const author = item.creator || item.author || null;
-        if (author === '') continue; // empty string = explicitly no author
+        if (author === '') continue;
         articles.push({
           title,
-          url: item.link || '',
+          url: rawUrl,
           date: pubDate.toISOString(),
           author: author || '',
           publication: source,
@@ -182,12 +196,15 @@ async function fetchTopicArticles(seenUrls = new Set()) {
 
   const articles = [];
   const seen = new Set(seenUrls);
+  const seenNorms = new Set(seenTitles);
 
   for (const result of results) {
     if (result.status === 'fulfilled') {
       for (const article of result.value) {
-        if (article.url && !seen.has(article.url)) {
+        const norm = normalizeTitle(article.title);
+        if (article.url && !seen.has(article.url) && !seenNorms.has(norm)) {
           seen.add(article.url);
+          seenNorms.add(norm);
           articles.push(article);
         }
       }
@@ -219,8 +236,8 @@ function isOpinionPiece(item, title) {
   return false;
 }
 
-async function fetchOpinionArticles(seenUrls = new Set()) {
-  const twoDaysAgo = new Date(Date.now() - 72 * 60 * 60 * 1000); // 3 days for opinions
+async function fetchOpinionArticles(seenUrls = new Set(), seenTitles = new Set()) {
+  const twoDaysAgo = new Date(Date.now() - 48 * 60 * 60 * 1000);
 
   const results = await Promise.allSettled(
     OPINION_QUERIES.map(async (q) => {
@@ -230,6 +247,8 @@ async function fetchOpinionArticles(seenUrls = new Set()) {
       for (const item of feed.items) {
         const pubDate = new Date(item.pubDate);
         if (isNaN(pubDate.getTime()) || pubDate < twoDaysAgo) continue;
+        const rawUrl = item.link || '';
+        if (isMsnUrl(rawUrl)) continue;
         const source = extractSource(item.title || '');
         const title = cleanTitle(item.title || 'Untitled');
         if (!isOpinionPiece(item, title)) continue;
@@ -238,7 +257,7 @@ async function fetchOpinionArticles(seenUrls = new Set()) {
         if (author === '') continue;
         articles.push({
           title,
-          url: item.link || '',
+          url: rawUrl,
           date: pubDate.toISOString(),
           author: author || '',
           publication: source,
@@ -253,12 +272,15 @@ async function fetchOpinionArticles(seenUrls = new Set()) {
 
   const articles = [];
   const seen = new Set(seenUrls);
+  const seenNorms = new Set(seenTitles);
 
   for (const result of results) {
     if (result.status === 'fulfilled') {
       for (const article of result.value) {
-        if (article.url && !seen.has(article.url)) {
+        const norm = normalizeTitle(article.title);
+        if (article.url && !seen.has(article.url) && !seenNorms.has(norm)) {
           seen.add(article.url);
+          seenNorms.add(norm);
           articles.push(article);
         }
       }
@@ -276,4 +298,4 @@ function clearCache() {
   cache.del('feed');
 }
 
-module.exports = { buildFeed, clearCache, fetchArticlesForAuthor, fetchTopicArticles, fetchOpinionArticles, PUBLICATION_COLORS };
+module.exports = { buildFeed, clearCache, fetchArticlesForAuthor, fetchTopicArticles, fetchOpinionArticles, normalizeTitle, PUBLICATION_COLORS };
