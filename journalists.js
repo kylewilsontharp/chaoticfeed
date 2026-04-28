@@ -37,4 +37,5 @@ module.exports = [
   { name: 'Katie Robertson', publication: 'New York Times' },
   { name: 'Andrew Marantz', publication: 'The New Yorker' },
   { name: 'Max Greenwood', publication: 'Campaigns & Elections' },
+  { name: 'Casey Newton', publication: 'Platformer' },
 ];

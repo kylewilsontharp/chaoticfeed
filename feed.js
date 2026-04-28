@@ -30,6 +30,7 @@ const PUBLICATION_COLORS = {
   'The New Yorker': '#d40000',
   'Wall Street Journal': '#0080c6',
   'Campaigns & Elections': '#15803d',
+  'Platformer': '#7c3aed',
 };
 
 function cleanTitle(raw) {
