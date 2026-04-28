@@ -78,6 +78,7 @@ function buildEmailHTML(narrative, journalistArticles, chaosArticles, dateStr, t
 
     ${narrativeBlock(narrative)}
 
+    <h2 style="margin:0 0 20px;font-size:18px;font-weight:800;color:#0a0a0a;letter-spacing:-0.02em;">Must Reads</h2>
     ${journalistHTML}
 
     <div style="border-top:2px solid #0a0a0a;margin:32px 0 28px;"></div>

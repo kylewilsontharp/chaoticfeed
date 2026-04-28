@@ -22,6 +22,10 @@ const PUBLICATION_COLORS = {
   'NOTUS': '#0891b2',
   'Washington Post': '#231f20',
   'Freelance': '#6b7280',
+  'Bloomberg': '#0065ff',
+  'New York Magazine': '#d4002a',
+  'The Atlantic': '#0f172a',
+  'Silver Bulletin': '#6366f1',
 };
 
 function cleanTitle(raw) {

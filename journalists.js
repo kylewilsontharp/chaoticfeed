@@ -10,7 +10,7 @@ module.exports = [
   { name: 'Oliver Darcy', publication: 'Status' },
   { name: 'Peter Hamby', publication: 'Puck' },
   { name: 'Jessica Testa', publication: 'New York Times' },
-  // Added
+  // Added round 2
   { name: 'Dave Weigel', publication: 'Semafor' },
   { name: 'Jonathan Martin', publication: 'POLITICO' },
   { name: 'Lauren Egan', publication: 'The Bulwark' },
@@ -24,4 +24,11 @@ module.exports = [
   { name: 'Nancy Scola', publication: 'Freelance' },
   { name: 'Adam Wren', publication: 'POLITICO' },
   { name: 'Michael Scherer', publication: 'Washington Post' },
+  // Added round 3
+  { name: 'Alex Roarty', publication: 'Freelance' },
+  { name: 'Joshua Green', publication: 'Bloomberg' },
+  { name: 'Gabriel Debenedetti', publication: 'New York Magazine' },
+  { name: 'Edward-Isaac Dovere', publication: 'The Atlantic' },
+  { name: 'Nate Silver', publication: 'Silver Bulletin' },
+  { name: 'Joseph Bernstein', publication: 'New York Times' },
 ];
