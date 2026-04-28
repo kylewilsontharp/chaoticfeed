@@ -217,10 +217,13 @@ async function sendBriefing() {
   for (const a of recent) categorized[categorize(a)].push(a);
 
   const dateStr = formatDateLong(new Date());
-  await Promise.allSettled([
+  const results = await Promise.allSettled([
     sendEmail(categorized, dateStr, recent.length),
     sendSMS(recent),
   ]);
+  for (const r of results) {
+    if (r.status === 'rejected') console.error('[briefing] Delivery error:', r.reason);
+  }
 }
 
 module.exports = { sendBriefing };
