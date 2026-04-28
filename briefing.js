@@ -1,4 +1,3 @@
-const nodemailer = require('nodemailer');
 const https = require('https');
 const { buildFeed, clearCache } = require('./feed');
 
@@ -127,27 +126,46 @@ function buildPlainText(categorized, dateStr, total) {
 }
 
 async function sendEmail(categorized, dateStr, total) {
-  if (!process.env.SMTP_HOST || !process.env.BRIEFING_TO) {
-    console.log('[briefing] Email skipped — set SMTP_HOST and BRIEFING_TO to enable');
+  const apiKey = process.env.RESEND_API_KEY;
+  const to = process.env.BRIEFING_TO;
+
+  if (!apiKey || !to) {
+    console.log('[briefing] Email skipped — set RESEND_API_KEY and BRIEFING_TO to enable');
     return;
   }
 
-  const transporter = nodemailer.createTransport({
-    host: process.env.SMTP_HOST,
-    port: parseInt(process.env.SMTP_PORT || '587', 10),
-    secure: process.env.SMTP_SECURE === 'true',
-    auth: { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS },
-  });
-
-  await transporter.sendMail({
-    from: process.env.BRIEFING_FROM || `Chaotic Era Briefing <${process.env.SMTP_USER}>`,
-    to: process.env.BRIEFING_TO,
+  const payload = JSON.stringify({
+    from: process.env.BRIEFING_FROM || 'Chaotic Era Briefing <onboarding@resend.dev>',
+    to: [to],
     subject: `Chaotic Era Briefing — ${dateStr}`,
     html: buildEmailHTML(categorized, dateStr, total),
     text: buildPlainText(categorized, dateStr, total),
   });
 
-  console.log(`[briefing] Email sent to ${process.env.BRIEFING_TO}`);
+  await new Promise((resolve, reject) => {
+    const req = https.request({
+      hostname: 'api.resend.com',
+      path: '/emails',
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${apiKey}`,
+        'Content-Type': 'application/json',
+        'Content-Length': Buffer.byteLength(payload),
+      },
+    }, (res) => {
+      let data = '';
+      res.on('data', c => { data += c; });
+      res.on('end', () => {
+        if (res.statusCode >= 200 && res.statusCode < 300) resolve();
+        else reject(new Error(`Resend ${res.statusCode}: ${data}`));
+      });
+    });
+    req.on('error', reject);
+    req.write(payload);
+    req.end();
+  });
+
+  console.log(`[briefing] Email sent to ${to}`);
 }
 
 async function sendSMS(articles) {
