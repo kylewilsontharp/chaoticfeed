@@ -1,0 +1,32 @@
+name: Daily Briefing
+
+on:
+  schedule:
+    - cron: '0 11 * * *'  # 6:00 AM ET (7:00 AM during daylight saving time)
+  workflow_dispatch:       # Lets you trigger it manually from GitHub anytime
+
+jobs:
+  send-briefing:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - run: npm ci
+
+      - name: Send daily briefing
+        run: npm run briefing
+        env:
+          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+          BRIEFING_TO: ${{ secrets.BRIEFING_TO }}
+          BRIEFING_FROM: Chaotic Era Briefing <onboarding@resend.dev>
+          BRIEFING_TIMEZONE: America/New_York
+          TWILIO_ACCOUNT_SID: ${{ secrets.TWILIO_ACCOUNT_SID }}
+          TWILIO_AUTH_TOKEN: ${{ secrets.TWILIO_AUTH_TOKEN }}
+          TWILIO_FROM_NUMBER: ${{ secrets.TWILIO_FROM_NUMBER }}
+          TWILIO_TO_NUMBER: ${{ secrets.TWILIO_TO_NUMBER }}
