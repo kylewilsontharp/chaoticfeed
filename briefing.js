@@ -1,5 +1,6 @@
 const https = require('https');
 const { buildFeed, clearCache, fetchTopicArticles, fetchOpinionArticles, normalizeTitle } = require('./feed');
+const { filterByVerifiedDate } = require('./verifyDate');
 const { generateNarrative } = require('./summarize');
 
 const TZ = process.env.BRIEFING_TIMEZONE || 'America/New_York';
@@ -261,20 +262,26 @@ async function sendBriefing() {
   }
 
   const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
-  const journalistArticles = allArticles.filter(a => new Date(a.date) >= oneDayAgo);
-  console.log(`[briefing] ${journalistArticles.length} journalist articles in the last 24h`);
+  const recentFromRss = allArticles.filter(a => new Date(a.date) >= oneDayAgo);
+  console.log(`[briefing] ${recentFromRss.length} journalist articles from RSS (last 24h), verifying page dates...`);
+  const journalistArticles = await filterByVerifiedDate(recentFromRss, 1);
+  console.log(`[briefing] ${journalistArticles.length} journalist articles after page-date verification`);
 
   const seenUrls = new Set(journalistArticles.map(a => a.url));
   const seenTitles = new Set(journalistArticles.map(a => normalizeTitle(a.title)));
   let chaosArticles = [];
   let opinionArticles = [];
   try {
-    [chaosArticles, opinionArticles] = await Promise.all([
+    const [rawChaos, rawOpinions] = await Promise.all([
       fetchTopicArticles(seenUrls, seenTitles),
       fetchOpinionArticles(seenUrls, seenTitles),
     ]);
-    console.log(`[briefing] ${chaosArticles.length} More Chaos articles`);
-    console.log(`[briefing] ${opinionArticles.length} Very Chaotic Takes`);
+    console.log(`[briefing] ${rawChaos.length} More Chaos from RSS, ${rawOpinions.length} Takes from RSS — verifying page dates...`);
+    [chaosArticles, opinionArticles] = await Promise.all([
+      filterByVerifiedDate(rawChaos, 2),
+      filterByVerifiedDate(rawOpinions, 2),
+    ]);
+    console.log(`[briefing] ${chaosArticles.length} More Chaos after verification, ${opinionArticles.length} Takes after verification`);
   } catch (err) {
     console.error('[briefing] Failed to fetch topic articles:', err.message);
   }
