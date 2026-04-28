@@ -26,6 +26,7 @@ const PUBLICATION_COLORS = {
   'New York Magazine': '#d4002a',
   'The Atlantic': '#0f172a',
   'Silver Bulletin': '#6366f1',
+  'CNN': '#cc0000',
 };
 
 function cleanTitle(raw) {

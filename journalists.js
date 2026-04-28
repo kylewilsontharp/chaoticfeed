@@ -25,10 +25,10 @@ module.exports = [
   { name: 'Adam Wren', publication: 'POLITICO' },
   { name: 'Michael Scherer', publication: 'Washington Post' },
   // Added round 3
-  { name: 'Alex Roarty', publication: 'Freelance' },
+  { name: 'Alex Roarty', publication: 'NOTUS' },
   { name: 'Joshua Green', publication: 'Bloomberg' },
   { name: 'Gabriel Debenedetti', publication: 'New York Magazine' },
-  { name: 'Edward-Isaac Dovere', publication: 'The Atlantic' },
+  { name: 'Edward-Isaac Dovere', publication: 'CNN' },
   { name: 'Nate Silver', publication: 'Silver Bulletin' },
   { name: 'Joseph Bernstein', publication: 'New York Times' },
 ];
