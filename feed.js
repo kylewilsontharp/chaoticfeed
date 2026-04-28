@@ -111,6 +111,8 @@ const CHAOS_QUERIES = [
   'site:pewresearch.org',
   'site:mediamatters.org',
   '"news media" trust OR habits OR consumption',
+  '"political influencer"',
+  '"influencer marketing" politics',
 ];
 
 async function fetchTopicArticles(seenUrls = new Set()) {
