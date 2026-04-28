@@ -1,4 +1,5 @@
 module.exports = [
+  // Original roster
   { name: 'Max Tani', publication: 'Semafor' },
   { name: 'Theodore Schleifer', publication: 'New York Times' },
   { name: 'Taylor Lorenz', publication: 'UserMag' },
@@ -9,4 +10,18 @@ module.exports = [
   { name: 'Oliver Darcy', publication: 'Status' },
   { name: 'Peter Hamby', publication: 'Puck' },
   { name: 'Jessica Testa', publication: 'New York Times' },
+  // Added
+  { name: 'Dave Weigel', publication: 'Semafor' },
+  { name: 'Jonathan Martin', publication: 'POLITICO' },
+  { name: 'Lauren Egan', publication: 'The Bulwark' },
+  { name: 'Will Sommer', publication: 'The Bulwark' },
+  { name: 'Sam Stein', publication: 'The Bulwark' },
+  { name: 'Issie Lapowsky', publication: 'Freelance' },
+  { name: 'Zach Montellaro', publication: 'POLITICO' },
+  { name: 'Ben Smith', publication: 'Semafor' },
+  { name: 'Jessica Piper', publication: 'POLITICO' },
+  { name: 'Elena Schneider', publication: 'NOTUS' },
+  { name: 'Nancy Scola', publication: 'Freelance' },
+  { name: 'Adam Wren', publication: 'POLITICO' },
+  { name: 'Michael Scherer', publication: 'Washington Post' },
 ];

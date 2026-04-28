@@ -34,9 +34,9 @@ function formatDateLong(date) {
   });
 }
 
-function formatTime(dateStr) {
-  return new Date(dateStr).toLocaleTimeString('en-US', {
-    hour: 'numeric', minute: '2-digit', hour12: true, timeZone: TZ,
+function formatDateShort(dateStr) {
+  return new Date(dateStr).toLocaleDateString('en-US', {
+    month: 'short', day: 'numeric', year: 'numeric', timeZone: TZ,
   });
 }
 
@@ -59,13 +59,14 @@ function buildEmailHTML(categorized, dateStr, total) {
     .filter(s => categorized[s.key].length > 0)
     .map(s => {
       const items = categorized[s.key].map(a => `
-        <div style="margin-bottom:16px;padding-bottom:16px;border-bottom:1px solid #f4f4f5;">
-          <a href="${esc(a.url)}" style="display:block;font-size:15px;font-weight:500;color:#0a0a0a;text-decoration:none;line-height:1.5;margin-bottom:5px;">${esc(a.title)}</a>
-          <span style="font-size:12px;color:#71717a;">${esc(a.author)}</span>
-          <span style="font-size:12px;color:#d4d4d8;margin:0 4px;">&middot;</span>
-          <span style="font-size:12px;font-weight:500;color:#52525b;">${esc(a.publication)}</span>
-          <span style="font-size:12px;color:#d4d4d8;margin:0 4px;">&middot;</span>
-          <span style="font-size:12px;color:#a1a1aa;">${formatTime(a.date)}</span>
+        <div style="margin-bottom:20px;padding-bottom:20px;border-bottom:1px solid #f4f4f5;">
+          <a href="${esc(a.url)}" style="display:block;font-size:15px;font-weight:700;color:#0a0a0a;text-decoration:none;line-height:1.4;margin-bottom:6px;">${esc(a.title)}</a>
+          ${a.summary ? `<p style="margin:0 0 8px;font-size:13px;color:#52525b;line-height:1.5;">${esc(a.summary)}</p>` : ''}
+          <div style="font-size:12px;color:#a1a1aa;">
+            <span>${esc(a.author)}</span><br>
+            <span style="font-weight:500;color:#71717a;">${esc(a.publication)}</span><br>
+            <span>${formatDateShort(a.date)}</span>
+          </div>
         </div>`).join('');
 
       return `
@@ -86,8 +87,8 @@ function buildEmailHTML(categorized, dateStr, total) {
 <div style="max-width:600px;margin:0 auto;padding:24px 16px;">
 
   <div style="background:#0a0a0a;padding:28px 32px;border-radius:8px 8px 0 0;">
-    <div style="font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:0.15em;color:#6b7280;margin-bottom:10px;">Daily Briefing</div>
-    <h1 style="margin:0 0 6px;font-size:26px;font-weight:800;color:#ffffff;letter-spacing:-0.03em;">Chaotic Era</h1>
+    <div style="font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:0.15em;color:#6b7280;margin-bottom:10px;">Chaotic Era</div>
+    <h1 style="margin:0 0 6px;font-size:26px;font-weight:800;color:#ffffff;letter-spacing:-0.03em;">Extra Chaotic</h1>
     <p style="margin:0;font-size:13px;color:#9ca3af;">${esc(dateStr)}&nbsp;&middot;&nbsp;${total} ${total === 1 ? 'story' : 'stories'} from the last 24 hours</p>
   </div>
 
@@ -107,7 +108,7 @@ function buildEmailHTML(categorized, dateStr, total) {
 
 function buildPlainText(categorized, dateStr, total) {
   const lines = [
-    'CHAOTIC ERA DAILY BRIEFING',
+    'EXTRA CHAOTIC',
     dateStr,
     `${total} ${total === 1 ? 'story' : 'stories'} from the last 24 hours`,
     '',
@@ -117,7 +118,15 @@ function buildPlainText(categorized, dateStr, total) {
     if (!categorized[s.key].length) continue;
     lines.push(`--- ${s.label.toUpperCase()} ---`, '');
     for (const a of categorized[s.key]) {
-      lines.push(a.title, `${a.author} — ${a.publication} · ${formatTime(a.date)}`, a.url, '');
+      lines.push(
+        a.title,
+        ...(a.summary ? [a.summary] : []),
+        a.author,
+        a.publication,
+        formatDateShort(a.date),
+        a.url,
+        '',
+      );
     }
   }
 
@@ -137,7 +146,7 @@ async function sendEmail(categorized, dateStr, total) {
   const payload = JSON.stringify({
     from: process.env.BRIEFING_FROM || 'Chaotic Era Briefing <onboarding@resend.dev>',
     to: [to],
-    subject: `Chaotic Era Briefing — ${dateStr}`,
+    subject: `Extra Chaotic — ${dateStr}`,
     html: buildEmailHTML(categorized, dateStr, total),
     text: buildPlainText(categorized, dateStr, total),
   });

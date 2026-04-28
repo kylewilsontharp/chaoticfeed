@@ -17,7 +17,23 @@ const PUBLICATION_COLORS = {
   'Garbage Day': '#16a34a',
   'Status': '#0369a1',
   'Puck': '#b45309',
+  'POLITICO': '#c40000',
+  'The Bulwark': '#1d4ed8',
+  'NOTUS': '#0891b2',
+  'Washington Post': '#231f20',
+  'Freelance': '#6b7280',
 };
+
+function extractSummary(raw) {
+  if (!raw) return '';
+  // Strip trailing "- Publication Name" that Google News appends
+  const cleaned = raw.replace(/\s*[-–]\s*[A-Z][^-–\n]*$/, '').trim();
+  // Take first sentence if it's meaningful
+  const match = cleaned.match(/^[^.!?]+[.!?]/);
+  if (match && match[0].length > 25) return match[0].trim();
+  // Fallback: truncate at 160 chars
+  return cleaned.length > 160 ? cleaned.slice(0, 157) + '...' : cleaned;
+}
 
 async function fetchArticlesForAuthor(author) {
   const query = encodeURIComponent(`"${author.name}"`);
@@ -37,6 +53,7 @@ async function fetchArticlesForAuthor(author) {
       author: author.name,
       publication: author.publication,
       color: PUBLICATION_COLORS[author.publication] || '#6b7280',
+      summary: extractSummary(item.contentSnippet || item.content || ''),
     });
   }
   return articles;
