@@ -1,5 +1,5 @@
 const https = require('https');
-const { buildFeed, clearCache, fetchTopicArticles } = require('./feed');
+const { buildFeed, clearCache, fetchTopicArticles, fetchOpinionArticles } = require('./feed');
 const { generateNarrative } = require('./summarize');
 
 const TZ = process.env.BRIEFING_TIMEZONE || 'America/New_York';
@@ -48,10 +48,14 @@ function narrativeBlock(narrative) {
     </div>`;
 }
 
-function buildEmailHTML(narrative, journalistArticles, chaosArticles, dateStr, total) {
+function buildEmailHTML(narrative, journalistArticles, opinionArticles, chaosArticles, dateStr, total) {
   const journalistHTML = journalistArticles.length
     ? journalistArticles.map(articleCard).join('')
     : '<p style="font-size:14px;color:#a1a1aa;margin:0 0 20px;">No new articles from tracked journalists in the past 24 hours.</p>';
+
+  const opinionHTML = opinionArticles.length
+    ? opinionArticles.map(articleCard).join('')
+    : '<p style="font-size:14px;color:#a1a1aa;margin:0 0 20px;">No opinion pieces found today.</p>';
 
   const chaosHTML = chaosArticles.length
     ? chaosArticles.map(articleCard).join('')
@@ -83,6 +87,12 @@ function buildEmailHTML(narrative, journalistArticles, chaosArticles, dateStr, t
 
     <div style="border-top:2px solid #0a0a0a;margin:32px 0 28px;"></div>
 
+    <h2 style="margin:0 0 8px;font-size:18px;font-weight:800;color:#0a0a0a;letter-spacing:-0.02em;">Very Chaotic Takes</h2>
+    <p style="margin:0 0 20px;font-size:13px;color:#71717a;">Must-read opinions on the Democratic Party and partisan media</p>
+    ${opinionHTML}
+
+    <div style="border-top:2px solid #0a0a0a;margin:32px 0 28px;"></div>
+
     <h2 style="margin:0 0 20px;font-size:18px;font-weight:800;color:#0a0a0a;letter-spacing:-0.02em;">More Chaos</h2>
     ${chaosHTML}
 
@@ -98,7 +108,7 @@ function buildEmailHTML(narrative, journalistArticles, chaosArticles, dateStr, t
 </html>`;
 }
 
-function buildPlainText(narrative, journalistArticles, chaosArticles, dateStr, total) {
+function buildPlainText(narrative, journalistArticles, opinionArticles, chaosArticles, dateStr, total) {
   const lines = [
     'EXTRA CHAOTIC',
     dateStr,
@@ -110,6 +120,7 @@ function buildPlainText(narrative, journalistArticles, chaosArticles, dateStr, t
     lines.push("TODAY'S BRIEFING", '', narrative, '');
   }
 
+  lines.push('--- MUST READS ---', '');
   for (const a of journalistArticles) {
     lines.push(
       a.title,
@@ -117,6 +128,18 @@ function buildPlainText(narrative, journalistArticles, chaosArticles, dateStr, t
       a.url,
       '',
     );
+  }
+
+  if (opinionArticles.length) {
+    lines.push('--- VERY CHAOTIC TAKES ---', '');
+    for (const a of opinionArticles) {
+      lines.push(
+        a.title,
+        `${a.author ? a.author + ' · ' : ''}${a.publication} · ${formatDateShort(a.date)}`,
+        a.url,
+        '',
+      );
+    }
   }
 
   if (chaosArticles.length) {
@@ -135,7 +158,7 @@ function buildPlainText(narrative, journalistArticles, chaosArticles, dateStr, t
   return lines.join('\n');
 }
 
-async function sendEmail(narrative, journalistArticles, chaosArticles, dateStr, total) {
+async function sendEmail(narrative, journalistArticles, opinionArticles, chaosArticles, dateStr, total) {
   const apiKey = process.env.RESEND_API_KEY;
   const to = process.env.BRIEFING_TO;
 
@@ -148,8 +171,8 @@ async function sendEmail(narrative, journalistArticles, chaosArticles, dateStr, 
     from: process.env.BRIEFING_FROM || 'Extra Chaotic <onboarding@resend.dev>',
     to: [to],
     subject: `Extra Chaotic — ${dateStr}`,
-    html: buildEmailHTML(narrative, journalistArticles, chaosArticles, dateStr, total),
-    text: buildPlainText(narrative, journalistArticles, chaosArticles, dateStr, total),
+    html: buildEmailHTML(narrative, journalistArticles, opinionArticles, chaosArticles, dateStr, total),
+    text: buildPlainText(narrative, journalistArticles, opinionArticles, chaosArticles, dateStr, total),
   });
 
   await new Promise((resolve, reject) => {
@@ -243,9 +266,14 @@ async function sendBriefing() {
 
   const seenUrls = new Set(journalistArticles.map(a => a.url));
   let chaosArticles = [];
+  let opinionArticles = [];
   try {
-    chaosArticles = await fetchTopicArticles(seenUrls);
+    [chaosArticles, opinionArticles] = await Promise.all([
+      fetchTopicArticles(seenUrls),
+      fetchOpinionArticles(seenUrls),
+    ]);
     console.log(`[briefing] ${chaosArticles.length} More Chaos articles`);
+    console.log(`[briefing] ${opinionArticles.length} Very Chaotic Takes`);
   } catch (err) {
     console.error('[briefing] Failed to fetch topic articles:', err.message);
   }
@@ -255,7 +283,7 @@ async function sendBriefing() {
 
   const dateStr = formatDateLong(new Date());
   const results = await Promise.allSettled([
-    sendEmail(narrative, journalistArticles, chaosArticles, dateStr, journalistArticles.length),
+    sendEmail(narrative, journalistArticles, opinionArticles, chaosArticles, dateStr, journalistArticles.length),
     sendSMS(journalistArticles),
   ]);
   for (const r of results) {

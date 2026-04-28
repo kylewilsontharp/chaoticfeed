@@ -27,6 +27,8 @@ const PUBLICATION_COLORS = {
   'The Atlantic': '#0f172a',
   'Silver Bulletin': '#6366f1',
   'CNN': '#cc0000',
+  'The New Yorker': '#d40000',
+  'The Information': '#1a56db',
 };
 
 function cleanTitle(raw) {
@@ -131,6 +133,21 @@ const CHAOS_QUERIES = [
   '"influencer marketing" politics',
 ];
 
+const OUTLET_PRIORITY = new Map([
+  ['Axios', 10], ['POLITICO', 10], ['Semafor', 10],
+  ['Washington Post', 10], ['Wall Street Journal', 10], ['Bloomberg', 10],
+  ['New York Magazine', 9], ['The Atlantic', 9], ['The New Yorker', 9],
+  ['NPR', 9], ['Pew Research Center', 9], ['Media Matters', 9],
+  ['Reuters', 9], ['Associated Press', 9],
+  ['The Hill', 8], ['Slate', 8], ['Vox', 8], ['The Bulwark', 8],
+  ['Wired', 8], ['The Guardian', 8], ['Politico Magazine', 8],
+  ['NOTUS', 8], ['Garbage Day', 8], ['Status', 8],
+]);
+
+function outletScore(pub) {
+  return OUTLET_PRIORITY.get(pub) || 5;
+}
+
 async function fetchTopicArticles(seenUrls = new Set()) {
   const twoDaysAgo = new Date(Date.now() - 48 * 60 * 60 * 1000);
 
@@ -156,6 +173,7 @@ async function fetchTopicArticles(seenUrls = new Set()) {
           publication: source,
           color: PUBLICATION_COLORS[source] || '#6b7280',
           snippet: item.contentSnippet || '',
+          _score: outletScore(source),
         });
       }
       return articles;
@@ -176,12 +194,86 @@ async function fetchTopicArticles(seenUrls = new Set()) {
     }
   }
 
-  articles.sort((a, b) => new Date(b.date) - new Date(a.date));
-  return articles.slice(0, 20);
+  articles.sort((a, b) => {
+    if (b._score !== a._score) return b._score - a._score;
+    return new Date(b.date) - new Date(a.date);
+  });
+  return articles.slice(0, 15).map(({ _score, ...a }) => a);
+}
+
+const OPINION_QUERIES = [
+  'opinion "democratic party" future OR crisis OR strategy site:washingtonpost.com OR site:nytimes.com OR site:theatlantic.com OR site:slate.com OR site:vox.com',
+  'op-ed "democratic party" future OR rebuilding OR direction',
+  'opinion "partisan media" OR "media polarization" site:washingtonpost.com OR site:theatlantic.com OR site:columbia.edu',
+  'site:substack.com "democratic party" future OR strategy',
+  'site:substack.com "partisan media" OR "conservative media"',
+  'commentary "future of the democratic party"',
+];
+
+function isOpinionPiece(item, title) {
+  const t = title.toLowerCase();
+  const url = (item.link || '').toLowerCase();
+  if (/^opinion[:\s]|^op-ed[:\s]|^commentary[:\s]|^perspective[:\s]/i.test(title)) return true;
+  if (url.includes('substack.com')) return true;
+  if (url.includes('/opinion/') || url.includes('/opinions/') || url.includes('/commentary/')) return true;
+  return false;
+}
+
+async function fetchOpinionArticles(seenUrls = new Set()) {
+  const twoDaysAgo = new Date(Date.now() - 72 * 60 * 60 * 1000); // 3 days for opinions
+
+  const results = await Promise.allSettled(
+    OPINION_QUERIES.map(async (q) => {
+      const url = `https://news.google.com/rss/search?q=${encodeURIComponent(q)}&hl=en-US&gl=US&ceid=US:en`;
+      const feed = await parser.parseURL(url);
+      const articles = [];
+      for (const item of feed.items) {
+        const pubDate = new Date(item.pubDate);
+        if (isNaN(pubDate.getTime()) || pubDate < twoDaysAgo) continue;
+        const source = extractSource(item.title || '');
+        const title = cleanTitle(item.title || 'Untitled');
+        if (!isOpinionPiece(item, title)) continue;
+        if (isExcludedFromChaos(title, source)) continue;
+        const author = item.creator || item.author || null;
+        if (author === '') continue;
+        articles.push({
+          title,
+          url: item.link || '',
+          date: pubDate.toISOString(),
+          author: author || '',
+          publication: source,
+          color: PUBLICATION_COLORS[source] || '#6b7280',
+          snippet: item.contentSnippet || '',
+          _score: outletScore(source),
+        });
+      }
+      return articles;
+    })
+  );
+
+  const articles = [];
+  const seen = new Set(seenUrls);
+
+  for (const result of results) {
+    if (result.status === 'fulfilled') {
+      for (const article of result.value) {
+        if (article.url && !seen.has(article.url)) {
+          seen.add(article.url);
+          articles.push(article);
+        }
+      }
+    }
+  }
+
+  articles.sort((a, b) => {
+    if (b._score !== a._score) return b._score - a._score;
+    return new Date(b.date) - new Date(a.date);
+  });
+  return articles.slice(0, 3).map(({ _score, ...a }) => a);
 }
 
 function clearCache() {
   cache.del('feed');
 }
 
-module.exports = { buildFeed, clearCache, fetchArticlesForAuthor, fetchTopicArticles, PUBLICATION_COLORS };
+module.exports = { buildFeed, clearCache, fetchArticlesForAuthor, fetchTopicArticles, fetchOpinionArticles, PUBLICATION_COLORS };

@@ -31,4 +31,10 @@ module.exports = [
   { name: 'Edward-Isaac Dovere', publication: 'CNN' },
   { name: 'Nate Silver', publication: 'Silver Bulletin' },
   { name: 'Joseph Bernstein', publication: 'New York Times' },
+  // Added round 4
+  { name: 'Erik Wemple', publication: 'Washington Post' },
+  { name: 'Ben Mullin', publication: 'New York Times' },
+  { name: 'Katie Robertson', publication: 'New York Times' },
+  { name: 'Andrew Marantz', publication: 'The New Yorker' },
+  { name: 'Jessica Toonkel', publication: 'The Information' },
 ];
