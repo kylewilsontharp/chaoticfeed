@@ -1,30 +1,41 @@
 const Anthropic = require('@anthropic-ai/sdk');
 
-async function summarizeArticles(articles) {
+async function generateNarrative(journalistArticles, chaosArticles) {
   const apiKey = process.env.ANTHROPIC_API_KEY;
-  if (!apiKey || !articles.length) return articles;
+  if (!apiKey) return '';
 
   const client = new Anthropic({ apiKey });
 
-  const results = await Promise.allSettled(
-    articles.map(async (article) => {
-      const hasSnippet = article.summary &&
-        article.summary.trim().toLowerCase() !== article.title.trim().toLowerCase();
-      const snippetLine = hasSnippet ? `\nSnippet: ${article.summary}` : '';
+  const journalistList = journalistArticles.length
+    ? journalistArticles.map(a => `- "${a.title}" (${a.author}, ${a.publication})`).join('\n')
+    : '(none today)';
 
-      const message = await client.messages.create({
-        model: 'claude-haiku-4-5-20251001',
-        max_tokens: 120,
-        system: 'You write brief summaries for a political media newsletter called Chaotic Era. Write 1-2 sentences about what the article covers — be specific, name the key angle, person, or finding. Do not start with "This article" or repeat the headline. If there is not enough information to write a meaningful summary (title only, or clearly paywalled), respond with exactly: [Paywalled]',
-        messages: [{ role: 'user', content: `Title: ${article.title}${snippetLine}` }],
-      });
+  const chaosList = chaosArticles.length
+    ? chaosArticles.map(a => `- "${a.title}" (${a.publication})`).join('\n')
+    : '(none today)';
 
-      const text = message.content[0]?.type === 'text' ? message.content[0].text.trim() : '';
-      return { ...article, summary: text };
-    })
-  );
+  try {
+    const message = await client.messages.create({
+      model: 'claude-sonnet-4-6',
+      max_tokens: 500,
+      system: `You are an editorial assistant for Chaotic Era (chaoticera.news), a newsletter covering the intersection of politics, media, and digital culture — specifically: political media, conservative media ecosystems, campaign technology, political advertising, media consumption habits, and political influencers. Write in a smart, direct editorial voice. No fluff, no bullet points.`,
+      messages: [{
+        role: 'user',
+        content: `Based on today's news articles below, write a 1-2 paragraph morning briefing for the newsletter author. Identify which stories are getting traction and why they matter for the politics and media industry. End with 1-2 specific story angles that could make a compelling Chaotic Era newsletter issue this week.
 
-  return results.map((r, i) => r.status === 'fulfilled' ? r.value : articles[i]);
+FROM TRACKED JOURNALISTS:
+${journalistList}
+
+MORE CHAOS — TOPIC STORIES:
+${chaosList}`,
+      }],
+    });
+
+    return message.content[0]?.type === 'text' ? message.content[0].text.trim() : '';
+  } catch (err) {
+    console.error('[briefing] Narrative generation failed:', err.message);
+    return '';
+  }
 }
 
-module.exports = { summarizeArticles };
+module.exports = { generateNarrative };

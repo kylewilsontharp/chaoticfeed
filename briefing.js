@@ -1,6 +1,6 @@
 const https = require('https');
 const { buildFeed, clearCache, fetchTopicArticles } = require('./feed');
-const { summarizeArticles } = require('./summarize');
+const { generateNarrative } = require('./summarize');
 
 const TZ = process.env.BRIEFING_TIMEZONE || 'America/New_York';
 
@@ -26,18 +26,29 @@ function esc(str) {
 
 function articleCard(a) {
   return `
-    <div style="margin-bottom:20px;padding-bottom:20px;border-bottom:1px solid #f4f4f5;">
-      <a href="${esc(a.url)}" style="display:block;font-size:15px;font-weight:700;color:#0a0a0a;text-decoration:none;line-height:1.4;margin-bottom:6px;">${esc(a.title)}</a>
-      ${a.summary ? `<p style="margin:0 0 8px;font-size:13px;color:#52525b;line-height:1.5;">${esc(a.summary)}</p>` : ''}
+    <div style="margin-bottom:18px;padding-bottom:18px;border-bottom:1px solid #f4f4f5;">
+      <a href="${esc(a.url)}" style="display:block;font-size:15px;font-weight:700;color:#0a0a0a;text-decoration:none;line-height:1.4;margin-bottom:5px;">${esc(a.title)}</a>
       <div style="font-size:12px;color:#a1a1aa;">
-        ${a.author ? `<span>${esc(a.author)}</span><br>` : ''}
-        <span style="font-weight:500;color:#71717a;">${esc(a.publication)}</span><br>
-        <span>${formatDateShort(a.date)}</span>
+        ${a.author ? `<span>${esc(a.author)}</span> &middot; ` : ''}<span style="font-weight:500;color:#71717a;">${esc(a.publication)}</span> &middot; <span>${formatDateShort(a.date)}</span>
       </div>
     </div>`;
 }
 
-function buildEmailHTML(journalistArticles, chaosArticles, dateStr, total) {
+function narrativeBlock(narrative) {
+  if (!narrative) return '';
+  const paragraphs = narrative
+    .split(/\n\n+/)
+    .filter(p => p.trim())
+    .map(p => `<p style="margin:0 0 12px;font-size:14px;line-height:1.75;color:#1f2937;">${esc(p.trim())}</p>`)
+    .join('');
+  return `
+    <div style="background:#f0f7ff;border-left:4px solid #419EFF;padding:20px 24px;margin-bottom:32px;border-radius:0 6px 6px 0;">
+      <div style="font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:0.1em;color:#419EFF;margin-bottom:12px;">Today's Briefing</div>
+      ${paragraphs}
+    </div>`;
+}
+
+function buildEmailHTML(narrative, journalistArticles, chaosArticles, dateStr, total) {
   const journalistHTML = journalistArticles.length
     ? journalistArticles.map(articleCard).join('')
     : '<p style="font-size:14px;color:#a1a1aa;margin:0 0 20px;">No new articles from tracked journalists in the past 24 hours.</p>';
@@ -65,6 +76,8 @@ function buildEmailHTML(journalistArticles, chaosArticles, dateStr, total) {
 
   <div style="background:#ffffff;padding:28px 32px 20px;border-radius:0 0 8px 8px;border:1px solid #e4e4e7;border-top:0;">
 
+    ${narrativeBlock(narrative)}
+
     ${journalistHTML}
 
     <div style="border-top:2px solid #0a0a0a;margin:32px 0 28px;"></div>
@@ -84,7 +97,7 @@ function buildEmailHTML(journalistArticles, chaosArticles, dateStr, total) {
 </html>`;
 }
 
-function buildPlainText(journalistArticles, chaosArticles, dateStr, total) {
+function buildPlainText(narrative, journalistArticles, chaosArticles, dateStr, total) {
   const lines = [
     'EXTRA CHAOTIC',
     dateStr,
@@ -92,13 +105,14 @@ function buildPlainText(journalistArticles, chaosArticles, dateStr, total) {
     '',
   ];
 
+  if (narrative) {
+    lines.push("TODAY'S BRIEFING", '', narrative, '');
+  }
+
   for (const a of journalistArticles) {
     lines.push(
       a.title,
-      ...(a.summary ? [a.summary] : []),
-      ...(a.author ? [a.author] : []),
-      a.publication,
-      formatDateShort(a.date),
+      `${a.author ? a.author + ' · ' : ''}${a.publication} · ${formatDateShort(a.date)}`,
       a.url,
       '',
     );
@@ -109,9 +123,7 @@ function buildPlainText(journalistArticles, chaosArticles, dateStr, total) {
     for (const a of chaosArticles) {
       lines.push(
         a.title,
-        ...(a.summary ? [a.summary] : []),
-        ...(a.publication ? [a.publication] : []),
-        formatDateShort(a.date),
+        `${a.publication} · ${formatDateShort(a.date)}`,
         a.url,
         '',
       );
@@ -122,7 +134,7 @@ function buildPlainText(journalistArticles, chaosArticles, dateStr, total) {
   return lines.join('\n');
 }
 
-async function sendEmail(journalistArticles, chaosArticles, dateStr, total) {
+async function sendEmail(narrative, journalistArticles, chaosArticles, dateStr, total) {
   const apiKey = process.env.RESEND_API_KEY;
   const to = process.env.BRIEFING_TO;
 
@@ -135,8 +147,8 @@ async function sendEmail(journalistArticles, chaosArticles, dateStr, total) {
     from: process.env.BRIEFING_FROM || 'Extra Chaotic <onboarding@resend.dev>',
     to: [to],
     subject: `Extra Chaotic — ${dateStr}`,
-    html: buildEmailHTML(journalistArticles, chaosArticles, dateStr, total),
-    text: buildPlainText(journalistArticles, chaosArticles, dateStr, total),
+    html: buildEmailHTML(narrative, journalistArticles, chaosArticles, dateStr, total),
+    text: buildPlainText(narrative, journalistArticles, chaosArticles, dateStr, total),
   });
 
   await new Promise((resolve, reject) => {
@@ -165,7 +177,7 @@ async function sendEmail(journalistArticles, chaosArticles, dateStr, total) {
   console.log(`[briefing] Email sent to ${to}`);
 }
 
-async function sendSMS(journalistArticles, chaosArticles) {
+async function sendSMS(journalistArticles) {
   const { TWILIO_ACCOUNT_SID: sid, TWILIO_AUTH_TOKEN: token,
           TWILIO_FROM_NUMBER: from, TWILIO_TO_NUMBER: to } = process.env;
 
@@ -179,7 +191,7 @@ async function sendSMS(journalistArticles, chaosArticles) {
     `Extra Chaotic — ${journalistArticles.length} stories today:`,
     '',
     ...top.map((a, i) => `${i + 1}. ${a.title} (${a.publication})`),
-    ...(journalistArticles.length > 5 ? [`...and more. Check your email.`] : []),
+    ...(journalistArticles.length > 5 ? ['...and more. Check your email.'] : []),
     '',
     'chaoticera.news',
   ].join('\n');
@@ -237,16 +249,13 @@ async function sendBriefing() {
     console.error('[briefing] Failed to fetch topic articles:', err.message);
   }
 
-  console.log('[briefing] Generating summaries with Claude...');
-  const [summarizedJournalist, summarizedChaos] = await Promise.all([
-    summarizeArticles(journalistArticles),
-    summarizeArticles(chaosArticles),
-  ]);
+  console.log('[briefing] Generating narrative with Claude...');
+  const narrative = await generateNarrative(journalistArticles, chaosArticles);
 
   const dateStr = formatDateLong(new Date());
   const results = await Promise.allSettled([
-    sendEmail(summarizedJournalist, summarizedChaos, dateStr, summarizedJournalist.length),
-    sendSMS(summarizedJournalist, summarizedChaos),
+    sendEmail(narrative, journalistArticles, chaosArticles, dateStr, journalistArticles.length),
+    sendSMS(journalistArticles),
   ]);
   for (const r of results) {
     if (r.status === 'rejected') console.error('[briefing] Delivery error:', r.reason);

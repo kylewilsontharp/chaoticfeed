@@ -24,29 +24,41 @@ const PUBLICATION_COLORS = {
   'Freelance': '#6b7280',
 };
 
-// Google News appends " - Publication Name" to titles — strip it
 function cleanTitle(raw) {
   if (!raw) return 'Untitled';
   return raw.replace(/\s+[-–]\s+[A-Z][^-–]{1,50}$/, '').trim() || raw;
 }
 
-// Extract the publication name from a raw Google News title
 function extractSource(raw) {
   const match = raw.match(/[-–]\s*([A-Z][^-–]{1,50})$/);
   return match ? match[1].trim() : '';
 }
 
+// Applies to all feeds
 function isExcluded(title) {
   if (/latest\s+(?:\d{4}\s+)?polls/i.test(title)) return true;
   return false;
 }
 
-function extractSummary(raw) {
-  if (!raw) return '';
-  const cleaned = raw.replace(/\s*[-–]\s*[A-Z][^-–\n]*$/, '').trim();
-  const match = cleaned.match(/^[^.!?]+[.!?]/);
-  if (match && match[0].length > 25) return match[0].trim();
-  return cleaned.length > 160 ? cleaned.slice(0, 157) + '...' : cleaned;
+// Additional exclusions only for the More Chaos topic feed
+function isExcludedFromChaos(title, publication) {
+  const pub = publication.toLowerCase();
+  const t = title.toLowerCase();
+
+  // Excluded outlets
+  if (pub.includes('new york times') || pub.includes('nytimes')) return true;
+  if (pub.includes('nbc news') || pub === 'nbc') return true;
+
+  // Trackers, aggregators, interactive tools (no bylined author)
+  if (/\btracker\b/i.test(t)) return true;
+  if (/poll(ing)?\s+(average|aggregate|tracker)/i.test(t)) return true;
+  if (/\blive\s+(blog|updates?|results?|feed)\b/i.test(t)) return true;
+  if (/\binteractive\b/i.test(t)) return true;
+  if (/\belection\s+results?\b/i.test(t)) return true;
+  if (/\brolling\s+average\b/i.test(t)) return true;
+  if (/\bdatabank\b|\bscorecard\b/i.test(t)) return true;
+
+  return false;
 }
 
 async function fetchArticlesForAuthor(author) {
@@ -69,7 +81,7 @@ async function fetchArticlesForAuthor(author) {
       author: author.name,
       publication: author.publication,
       color: PUBLICATION_COLORS[author.publication] || '#6b7280',
-      summary: extractSummary(item.contentSnippet || item.content || ''),
+      snippet: item.contentSnippet || '',
     });
   }
   return articles;
@@ -99,7 +111,6 @@ async function buildFeed() {
   return allArticles;
 }
 
-// Topic queries for the "More Chaos" section
 const CHAOS_QUERIES = [
   '"partisan media"',
   '"conservative media"',
@@ -128,15 +139,18 @@ async function fetchTopicArticles(seenUrls = new Set()) {
         if (isNaN(pubDate.getTime()) || pubDate < twoDaysAgo) continue;
         const source = extractSource(item.title || '');
         const title = cleanTitle(item.title || 'Untitled');
-        if (isExcluded(title)) continue;
+        if (isExcluded(title) || isExcludedFromChaos(title, source)) continue;
+        // Require a detectable byline (dc:creator) — skip if clearly absent
+        const author = item.creator || item.author || null;
+        if (author === '') continue; // empty string = explicitly no author
         articles.push({
           title,
           url: item.link || '',
           date: pubDate.toISOString(),
-          author: '',
+          author: author || '',
           publication: source,
           color: PUBLICATION_COLORS[source] || '#6b7280',
-          summary: extractSummary(item.contentSnippet || item.content || ''),
+          snippet: item.contentSnippet || '',
         });
       }
       return articles;
