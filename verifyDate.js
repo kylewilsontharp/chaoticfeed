@@ -2,11 +2,18 @@ const https = require('https');
 const http = require('http');
 const { URL } = require('url');
 
-function fetchPageHtml(rawUrl, maxRedirects = 6, timeout = 5000) {
+const BLOCKED_DOMAINS = /\bmsn\.com\b/i;
+
+function fetchPage(rawUrl, maxRedirects = 6, timeout = 5000) {
   return new Promise((resolve, reject) => {
     const attempt = (url, remaining) => {
       let parsed;
       try { parsed = new URL(url); } catch (e) { return reject(e); }
+
+      // Bail out early if we've landed on a blocked domain mid-redirect
+      if (BLOCKED_DOMAINS.test(parsed.hostname)) {
+        return resolve({ html: '', finalUrl: url, blocked: true });
+      }
 
       const lib = parsed.protocol === 'https:' ? https : http;
       const req = lib.get({
@@ -27,13 +34,12 @@ function fetchPageHtml(rawUrl, maxRedirects = 6, timeout = 5000) {
         let data = '';
         res.on('data', (chunk) => {
           data += chunk;
-          // Stop reading once we have enough to find date metadata in <head>
           if (data.length > 60000) {
             req.destroy();
-            resolve(data);
+            resolve({ html: data, finalUrl: url, blocked: false });
           }
         });
-        res.on('end', () => resolve(data));
+        res.on('end', () => resolve({ html: data, finalUrl: url, blocked: false }));
       });
       req.on('error', reject);
       req.on('timeout', () => { req.destroy(); reject(new Error('timeout')); });
@@ -90,9 +96,13 @@ function extractDateFromHtml(html) {
 
 async function isArticleRecent(url, maxAgeDays) {
   try {
-    const html = await fetchPageHtml(url);
+    const { html, finalUrl, blocked } = await fetchPage(url);
+
+    // Exclude blocked domains regardless of date
+    if (blocked || BLOCKED_DOMAINS.test(finalUrl)) return false;
+
     const date = extractDateFromHtml(html);
-    if (!date) return true; // can't determine — keep the article
+    if (!date) return true; // can't determine date — keep the article
     const cutoff = new Date(Date.now() - maxAgeDays * 24 * 60 * 60 * 1000);
     return date >= cutoff;
   } catch {

@@ -36,6 +36,5 @@ module.exports = [
   { name: 'Ben Mullin', publication: 'New York Times' },
   { name: 'Katie Robertson', publication: 'New York Times' },
   { name: 'Andrew Marantz', publication: 'The New Yorker' },
-  { name: 'Jessica Toonkel', publication: 'Wall Street Journal' },
   { name: 'Max Greenwood', publication: 'Campaigns & Elections' },
 ];
