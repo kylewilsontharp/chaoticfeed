@@ -1,5 +1,6 @@
 const https = require('https');
 const { buildFeed, clearCache, fetchTopicArticles } = require('./feed');
+const { summarizeArticles } = require('./summarize');
 
 const TZ = process.env.BRIEFING_TIMEZONE || 'America/New_York';
 
@@ -236,10 +237,16 @@ async function sendBriefing() {
     console.error('[briefing] Failed to fetch topic articles:', err.message);
   }
 
+  console.log('[briefing] Generating summaries with Claude...');
+  const [summarizedJournalist, summarizedChaos] = await Promise.all([
+    summarizeArticles(journalistArticles),
+    summarizeArticles(chaosArticles),
+  ]);
+
   const dateStr = formatDateLong(new Date());
   const results = await Promise.allSettled([
-    sendEmail(journalistArticles, chaosArticles, dateStr, journalistArticles.length),
-    sendSMS(journalistArticles, chaosArticles),
+    sendEmail(summarizedJournalist, summarizedChaos, dateStr, summarizedJournalist.length),
+    sendSMS(summarizedJournalist, summarizedChaos),
   ]);
   for (const r of results) {
     if (r.status === 'rejected') console.error('[briefing] Delivery error:', r.reason);

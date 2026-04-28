@@ -26,6 +26,7 @@ jobs:
           BRIEFING_TO: ${{ secrets.BRIEFING_TO }}
           BRIEFING_FROM: Chaotic Era Briefing <onboarding@resend.dev>
           BRIEFING_TIMEZONE: America/New_York
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
           TWILIO_ACCOUNT_SID: ${{ secrets.TWILIO_ACCOUNT_SID }}
           TWILIO_AUTH_TOKEN: ${{ secrets.TWILIO_AUTH_TOKEN }}
           TWILIO_FROM_NUMBER: ${{ secrets.TWILIO_FROM_NUMBER }}

@@ -36,8 +36,8 @@ function extractSource(raw) {
   return match ? match[1].trim() : '';
 }
 
-function isExcluded(title, publication) {
-  if (publication === 'New York Times' && /latest polls/i.test(title)) return true;
+function isExcluded(title) {
+  if (/latest\s+(?:\d{4}\s+)?polls/i.test(title)) return true;
   return false;
 }
 
@@ -61,7 +61,7 @@ async function fetchArticlesForAuthor(author) {
     const pubDate = new Date(item.pubDate);
     if (isNaN(pubDate.getTime()) || pubDate < sevenDaysAgo) continue;
     const title = cleanTitle(item.title || 'Untitled');
-    if (isExcluded(title, author.publication)) continue;
+    if (isExcluded(title)) continue;
     articles.push({
       title,
       url: item.link || '',
@@ -128,7 +128,7 @@ async function fetchTopicArticles(seenUrls = new Set()) {
         if (isNaN(pubDate.getTime()) || pubDate < twoDaysAgo) continue;
         const source = extractSource(item.title || '');
         const title = cleanTitle(item.title || 'Untitled');
-        if (isExcluded(title, source)) continue;
+        if (isExcluded(title)) continue;
         articles.push({
           title,
           url: item.link || '',
