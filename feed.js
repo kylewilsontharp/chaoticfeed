@@ -36,6 +36,11 @@ function extractSource(raw) {
   return match ? match[1].trim() : '';
 }
 
+function isExcluded(title, publication) {
+  if (publication === 'New York Times' && /latest polls/i.test(title)) return true;
+  return false;
+}
+
 function extractSummary(raw) {
   if (!raw) return '';
   const cleaned = raw.replace(/\s*[-–]\s*[A-Z][^-–\n]*$/, '').trim();
@@ -55,8 +60,10 @@ async function fetchArticlesForAuthor(author) {
   for (const item of feed.items) {
     const pubDate = new Date(item.pubDate);
     if (isNaN(pubDate.getTime()) || pubDate < sevenDaysAgo) continue;
+    const title = cleanTitle(item.title || 'Untitled');
+    if (isExcluded(title, author.publication)) continue;
     articles.push({
-      title: cleanTitle(item.title || 'Untitled'),
+      title,
       url: item.link || '',
       date: pubDate.toISOString(),
       author: author.name,
@@ -118,8 +125,10 @@ async function fetchTopicArticles(seenUrls = new Set()) {
         const pubDate = new Date(item.pubDate);
         if (isNaN(pubDate.getTime()) || pubDate < twoDaysAgo) continue;
         const source = extractSource(item.title || '');
+        const title = cleanTitle(item.title || 'Untitled');
+        if (isExcluded(title, source)) continue;
         articles.push({
-          title: cleanTitle(item.title || 'Untitled'),
+          title,
           url: item.link || '',
           date: pubDate.toISOString(),
           author: '',
@@ -147,7 +156,7 @@ async function fetchTopicArticles(seenUrls = new Set()) {
   }
 
   articles.sort((a, b) => new Date(b.date) - new Date(a.date));
-  return articles;
+  return articles.slice(0, 20);
 }
 
 function clearCache() {
