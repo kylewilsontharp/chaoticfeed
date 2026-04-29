@@ -75,11 +75,18 @@ function isExcludedFromChaos(title, publication) {
   if (/\brolling\s+average\b/i.test(t)) return true;
   if (/\bdatabank\b|\bscorecard\b/i.test(t)) return true;
 
+  // International elections — skip if title is about another country's own vote
+  if (/\b(canadian|british|australian|french|german|indian|israeli|mexican|hungarian|italian|polish|japanese)\s+election\b/i.test(t)) return true;
+  if (/\belection\s+in\s+(canada|britain|uk|australia|france|germany|india|israel|mexico|hungary|italy|poland|japan|south korea)\b/i.test(t)) return true;
+
   return false;
 }
 
 async function fetchArticlesForAuthor(author) {
-  const query = encodeURIComponent(`"${author.name}"`);
+  // Include the publication name in the query to disambiguate common names (e.g. Ben Smith).
+  // Skip adding it for freelancers since "Freelance" is not a useful search term.
+  const pubHint = author.publication !== 'Freelance' ? ` "${author.publication}"` : '';
+  const query = encodeURIComponent(`"${author.name}"${pubHint}`);
   const url = `https://news.google.com/rss/search?q=${query}&hl=en-US&gl=US&ceid=US:en`;
   const feed = await parser.parseURL(url);
   const sevenDaysAgo = new Date();
