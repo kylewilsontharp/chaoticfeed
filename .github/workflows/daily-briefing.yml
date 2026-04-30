@@ -2,7 +2,7 @@ name: Daily Briefing
 
 on:
   schedule:
-    - cron: '0 10 * * *'  # 6:00 AM EDT (daylight saving time, UTC-4)
+    - cron: '0 9 * * *'  # 5:00 AM EDT (UTC-4)
   workflow_dispatch:       # Lets you trigger it manually from GitHub anytime
 
 jobs:

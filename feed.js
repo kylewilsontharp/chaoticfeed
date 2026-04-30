@@ -76,8 +76,9 @@ function isExcludedFromChaos(title, publication) {
   if (/\bdatabank\b|\bscorecard\b/i.test(t)) return true;
 
   // International elections — skip if title is about another country's own vote
-  if (/\b(canadian|british|australian|french|german|indian|israeli|mexican|hungarian|italian|polish|japanese)\s+election\b/i.test(t)) return true;
-  if (/\belection\s+in\s+(canada|britain|uk|australia|france|germany|india|israel|mexico|hungary|italy|poland|japan|south korea)\b/i.test(t)) return true;
+  if (/\b(canadian|british|australian|french|german|indian|israeli|mexican|hungarian|italian|polish|japanese|maltese|romanian|bulgarian|greek|swedish|danish|norwegian|finnish|dutch|belgian|portuguese|spanish|austrian|czech|slovak|swiss|turkish|iranian|pakistani|philippine|filipino|taiwanese|nigerian|kenyan|thai|indonesian|ukrainian|russian|chinese|cuban|venezuelan|peruvian|argentinian|colombian|chilean|brazilian|bolivian|ecuadorian|south african|south korean|new zealand)\s+election\b/i.test(t)) return true;
+  if (/\belection\s+in\s+(canada|britain|uk|australia|france|germany|india|israel|mexico|hungary|italy|poland|japan|south korea|malta|romania|bulgaria|greece|sweden|denmark|norway|finland|netherlands|belgium|portugal|spain|austria|czech republic|slovakia|switzerland|turkey|iran|pakistan|philippines|taiwan|nigeria|kenya|south africa|thailand|indonesia|ukraine|russia|china|cuba|venezuela|peru|argentina|colombia|chile|brazil|bolivia|ecuador|new zealand)\b/i.test(t)) return true;
+  if (/\b(malta|maltese)\b/i.test(t) && /\b(election|vote|parliament|party|minister)\b/i.test(t)) return true;
 
   return false;
 }

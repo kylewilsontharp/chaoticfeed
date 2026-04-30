@@ -1,5 +1,5 @@
 const https = require('https');
-const { buildFeed, clearCache, fetchTopicArticles, fetchOpinionArticles, normalizeTitle } = require('./feed');
+const { buildFeed, clearCache, fetchTopicArticles, normalizeTitle } = require('./feed');
 const { filterByVerifiedDate } = require('./verifyDate');
 const { generateNarrative } = require('./summarize');
 
@@ -81,14 +81,10 @@ function narrativeBlock(narrative) {
     </div>`;
 }
 
-function buildEmailHTML(narrative, journalistArticles, opinionArticles, chaosArticles, dateStr, total) {
+function buildEmailHTML(narrative, journalistArticles, chaosArticles, dateStr, total) {
   const journalistHTML = journalistArticles.length
     ? journalistArticles.map(articleCard).join('')
     : '<p style="font-size:14px;color:#a1a1aa;margin:0 0 20px;">No new articles from tracked journalists in the past 24 hours.</p>';
-
-  const opinionHTML = opinionArticles.length
-    ? opinionArticles.map(articleCard).join('')
-    : '<p style="font-size:14px;color:#a1a1aa;margin:0 0 20px;">No opinion pieces found today.</p>';
 
   const chaosHTML = chaosArticles.length
     ? chaosArticles.map(articleCard).join('')
@@ -115,14 +111,8 @@ function buildEmailHTML(narrative, journalistArticles, opinionArticles, chaosArt
 
     ${narrativeBlock(narrative)}
 
-    <h2 style="margin:0 0 20px;font-size:18px;font-weight:800;color:#0a0a0a;letter-spacing:-0.02em;">Must Reads</h2>
+    <h2 style="margin:0 0 20px;font-size:18px;font-weight:800;color:#0a0a0a;letter-spacing:-0.02em;">From Priority Journalists</h2>
     ${journalistHTML}
-
-    <div style="border-top:2px solid #0a0a0a;margin:32px 0 28px;"></div>
-
-    <h2 style="margin:0 0 8px;font-size:18px;font-weight:800;color:#0a0a0a;letter-spacing:-0.02em;">Very Chaotic Takes</h2>
-    <p style="margin:0 0 20px;font-size:13px;color:#71717a;">Must-read opinions on the Democratic Party and partisan media</p>
-    ${opinionHTML}
 
     <div style="border-top:2px solid #0a0a0a;margin:32px 0 28px;"></div>
 
@@ -141,7 +131,7 @@ function buildEmailHTML(narrative, journalistArticles, opinionArticles, chaosArt
 </html>`;
 }
 
-function buildPlainText(narrative, journalistArticles, opinionArticles, chaosArticles, dateStr, total) {
+function buildPlainText(narrative, journalistArticles, chaosArticles, dateStr, total) {
   const lines = [
     'EXTRA CHAOTIC',
     dateStr,
@@ -153,7 +143,7 @@ function buildPlainText(narrative, journalistArticles, opinionArticles, chaosArt
     lines.push("TODAY'S BRIEFING", '', narrative, '');
   }
 
-  lines.push('--- MUST READS ---', '');
+  lines.push('--- FROM PRIORITY JOURNALISTS ---', '');
   for (const a of journalistArticles) {
     lines.push(
       a.title,
@@ -161,18 +151,6 @@ function buildPlainText(narrative, journalistArticles, opinionArticles, chaosArt
       a.url,
       '',
     );
-  }
-
-  if (opinionArticles.length) {
-    lines.push('--- VERY CHAOTIC TAKES ---', '');
-    for (const a of opinionArticles) {
-      lines.push(
-        a.title,
-        `${a.author ? a.author + ' · ' : ''}${a.publication} · ${formatDateShort(a.date)}`,
-        a.url,
-        '',
-      );
-    }
   }
 
   if (chaosArticles.length) {
@@ -191,7 +169,7 @@ function buildPlainText(narrative, journalistArticles, opinionArticles, chaosArt
   return lines.join('\n');
 }
 
-async function sendEmail(narrative, journalistArticles, opinionArticles, chaosArticles, dateStr, total) {
+async function sendEmail(narrative, journalistArticles, chaosArticles, dateStr, total) {
   const apiKey = process.env.RESEND_API_KEY;
   const to = process.env.BRIEFING_TO;
 
@@ -204,8 +182,8 @@ async function sendEmail(narrative, journalistArticles, opinionArticles, chaosAr
     from: process.env.BRIEFING_FROM || 'Extra Chaotic <onboarding@resend.dev>',
     to: [to],
     subject: `Extra Chaotic — ${dateStr}`,
-    html: buildEmailHTML(narrative, journalistArticles, opinionArticles, chaosArticles, dateStr, total),
-    text: buildPlainText(narrative, journalistArticles, opinionArticles, chaosArticles, dateStr, total),
+    html: buildEmailHTML(narrative, journalistArticles, chaosArticles, dateStr, total),
+    text: buildPlainText(narrative, journalistArticles, chaosArticles, dateStr, total),
   });
 
   await new Promise((resolve, reject) => {
@@ -302,18 +280,11 @@ async function sendBriefing() {
   const seenUrls = new Set(journalistArticles.map(a => a.url));
   const seenTitles = new Set(journalistArticles.map(a => normalizeTitle(a.title)));
   let chaosArticles = [];
-  let opinionArticles = [];
   try {
-    const [rawChaos, rawOpinions] = await Promise.all([
-      fetchTopicArticles(seenUrls, seenTitles),
-      fetchOpinionArticles(seenUrls, seenTitles),
-    ]);
-    console.log(`[briefing] ${rawChaos.length} More Chaos from RSS, ${rawOpinions.length} Takes from RSS — verifying page dates...`);
-    [chaosArticles, opinionArticles] = await Promise.all([
-      filterByVerifiedDate(rawChaos, 2),
-      filterByVerifiedDate(rawOpinions, 2),
-    ]);
-    console.log(`[briefing] ${chaosArticles.length} More Chaos after verification, ${opinionArticles.length} Takes after verification`);
+    const rawChaos = await fetchTopicArticles(seenUrls, seenTitles);
+    console.log(`[briefing] ${rawChaos.length} More Chaos from RSS — verifying page dates...`);
+    chaosArticles = await filterByVerifiedDate(rawChaos, 2);
+    console.log(`[briefing] ${chaosArticles.length} More Chaos after verification`);
   } catch (err) {
     console.error('[briefing] Failed to fetch topic articles:', err.message);
   }
@@ -323,7 +294,7 @@ async function sendBriefing() {
 
   const dateStr = formatDateLong(new Date());
   const results = await Promise.allSettled([
-    sendEmail(narrative, journalistArticles, opinionArticles, chaosArticles, dateStr, journalistArticles.length),
+    sendEmail(narrative, journalistArticles, chaosArticles, dateStr, journalistArticles.length),
     sendSMS(journalistArticles),
   ]);
   for (const r of results) {
