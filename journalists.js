@@ -38,4 +38,9 @@ module.exports = [
   { name: 'Andrew Marantz', publication: 'The New Yorker' },
   { name: 'Max Greenwood', publication: 'Campaigns & Elections' },
   { name: 'Casey Newton', publication: 'Platformer' },
+  // Added round 5
+  { name: 'Natalie Korach', publication: 'Status' },
+  { name: 'Jon Passantino', publication: 'Status' },
+  { name: 'Ken Bensinger', publication: 'New York Times' },
+  { name: 'Brian Stelter', publication: 'CNN' },
 ];

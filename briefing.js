@@ -1,7 +1,6 @@
 const https = require('https');
 const { buildFeed, clearCache, fetchTopicArticles, normalizeTitle } = require('./feed');
 const { filterByVerifiedDate } = require('./verifyDate');
-const { generateNarrative } = require('./summarize');
 
 const TZ = process.env.BRIEFING_TIMEZONE || 'America/New_York';
 
@@ -35,53 +34,11 @@ function articleCard(a) {
     </div>`;
 }
 
-function renderMarkdown(text) {
-  // Convert **bold** to <strong>, then escape remaining HTML-sensitive chars
-  // We escape first (to protect < > & in article titles), then unescape our bold markers
-  const BOLD_PLACEHOLDER = '\x00BOLD_OPEN\x00';
-  const BOLD_CLOSE_PLACEHOLDER = '\x00BOLD_CLOSE\x00';
-  const withPlaceholders = text
-    .replace(/\*\*(.+?)\*\*/g, `${BOLD_PLACEHOLDER}$1${BOLD_CLOSE_PLACEHOLDER}`);
-  const escaped = esc(withPlaceholders);
-  return escaped
-    .replace(new RegExp(esc(BOLD_PLACEHOLDER), 'g'), '<strong>')
-    .replace(new RegExp(esc(BOLD_CLOSE_PLACEHOLDER), 'g'), '</strong>');
+function greetingBlock() {
+  return `<p style="margin:0 0 28px;font-size:15px;line-height:1.6;color:#1f2937;">Good morning, Kyle! Here are stories you may have missed this week.</p>`;
 }
 
-function narrativeBlock(narrative) {
-  if (!narrative) return '';
-
-  const lines = narrative.split('\n');
-  let html = '';
-
-  for (const raw of lines) {
-    const line = raw.trim();
-    if (!line) continue;
-
-    if (line.startsWith('- ')) {
-      // Bullet item
-      html += `<div style="margin:0 0 8px;padding-left:16px;font-size:14px;line-height:1.6;color:#1f2937;position:relative;">
-        <span style="position:absolute;left:0;color:#419EFF;">&#8226;</span>
-        ${renderMarkdown(line.slice(2))}
-      </div>`;
-    } else {
-      // Headline or label line — slightly larger if it looks like a heading
-      const isHeading = /^\*\*[^*]+\*\*$/.test(line);
-      const style = isHeading
-        ? 'margin:0 0 14px;font-size:15px;line-height:1.4;color:#0a0a0a;'
-        : 'margin:0 0 10px;font-size:14px;line-height:1.6;color:#1f2937;';
-      html += `<p style="${style}">${renderMarkdown(line)}</p>`;
-    }
-  }
-
-  return `
-    <div style="background:#f0f7ff;border-left:4px solid #419EFF;padding:20px 24px;margin-bottom:32px;border-radius:0 6px 6px 0;">
-      <div style="font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:0.1em;color:#419EFF;margin-bottom:14px;">Today's Briefing</div>
-      ${html}
-    </div>`;
-}
-
-function buildEmailHTML(narrative, journalistArticles, chaosArticles, dateStr, total) {
+function buildEmailHTML(journalistArticles, chaosArticles, dateStr, total) {
   const journalistHTML = journalistArticles.length
     ? journalistArticles.map(articleCard).join('')
     : '<p style="font-size:14px;color:#a1a1aa;margin:0 0 20px;">No new articles from tracked journalists in the past 24 hours.</p>';
@@ -109,14 +66,14 @@ function buildEmailHTML(narrative, journalistArticles, chaosArticles, dateStr, t
 
   <div style="background:#ffffff;padding:28px 32px 20px;border-radius:0 0 8px 8px;border:1px solid #e4e4e7;border-top:0;">
 
-    ${narrativeBlock(narrative)}
+    ${greetingBlock()}
 
     <h2 style="margin:0 0 20px;font-size:18px;font-weight:800;color:#0a0a0a;letter-spacing:-0.02em;">From Priority Journalists</h2>
     ${journalistHTML}
 
     <div style="border-top:2px solid #0a0a0a;margin:32px 0 28px;"></div>
 
-    <h2 style="margin:0 0 20px;font-size:18px;font-weight:800;color:#0a0a0a;letter-spacing:-0.02em;">More Chaos</h2>
+    <h2 style="margin:0 0 20px;font-size:18px;font-weight:800;color:#0a0a0a;letter-spacing:-0.02em;">More things you should read</h2>
     ${chaosHTML}
 
     <div style="padding-top:20px;border-top:1px solid #f4f4f5;margin-top:12px;">
@@ -131,19 +88,16 @@ function buildEmailHTML(narrative, journalistArticles, chaosArticles, dateStr, t
 </html>`;
 }
 
-function buildPlainText(narrative, journalistArticles, chaosArticles, dateStr, total) {
+function buildPlainText(journalistArticles, chaosArticles, dateStr, total) {
   const lines = [
     'EXTRA CHAOTIC',
     dateStr,
-    `${total} ${total === 1 ? 'story' : 'stories'} from tracked journalists`,
+    '',
+    'Good morning, Kyle! Here are stories you may have missed this week.',
+    '',
+    '--- FROM PRIORITY JOURNALISTS ---',
     '',
   ];
-
-  if (narrative) {
-    lines.push("TODAY'S BRIEFING", '', narrative, '');
-  }
-
-  lines.push('--- FROM PRIORITY JOURNALISTS ---', '');
   for (const a of journalistArticles) {
     lines.push(
       a.title,
@@ -154,7 +108,7 @@ function buildPlainText(narrative, journalistArticles, chaosArticles, dateStr, t
   }
 
   if (chaosArticles.length) {
-    lines.push('--- MORE CHAOS ---', '');
+    lines.push('--- MORE THINGS YOU SHOULD READ ---', '');
     for (const a of chaosArticles) {
       lines.push(
         a.title,
@@ -169,7 +123,7 @@ function buildPlainText(narrative, journalistArticles, chaosArticles, dateStr, t
   return lines.join('\n');
 }
 
-async function sendEmail(narrative, journalistArticles, chaosArticles, dateStr, total) {
+async function sendEmail(journalistArticles, chaosArticles, dateStr, total) {
   const apiKey = process.env.RESEND_API_KEY;
   const to = process.env.BRIEFING_TO;
 
@@ -182,8 +136,8 @@ async function sendEmail(narrative, journalistArticles, chaosArticles, dateStr, 
     from: process.env.BRIEFING_FROM || 'Extra Chaotic <onboarding@resend.dev>',
     to: [to],
     subject: `Extra Chaotic — ${dateStr}`,
-    html: buildEmailHTML(narrative, journalistArticles, chaosArticles, dateStr, total),
-    text: buildPlainText(narrative, journalistArticles, chaosArticles, dateStr, total),
+    html: buildEmailHTML(journalistArticles, chaosArticles, dateStr, total),
+    text: buildPlainText(journalistArticles, chaosArticles, dateStr, total),
   });
 
   await new Promise((resolve, reject) => {
@@ -289,12 +243,9 @@ async function sendBriefing() {
     console.error('[briefing] Failed to fetch topic articles:', err.message);
   }
 
-  console.log('[briefing] Generating narrative with Claude...');
-  const narrative = await generateNarrative(journalistArticles, chaosArticles);
-
   const dateStr = formatDateLong(new Date());
   const results = await Promise.allSettled([
-    sendEmail(narrative, journalistArticles, chaosArticles, dateStr, journalistArticles.length),
+    sendEmail(journalistArticles, chaosArticles, dateStr, journalistArticles.length),
     sendSMS(journalistArticles),
   ]);
   for (const r of results) {
