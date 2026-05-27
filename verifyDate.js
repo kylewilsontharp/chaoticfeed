@@ -91,6 +91,13 @@ function extractDateFromHtml(html) {
     }
   }
 
+  // <time datetime="..."> — used by Substack, Ghost, and many newsletter platforms
+  const timeEl = html.match(/<time[^>]+\bdatetime=["']([^"']+)["']/i);
+  if (timeEl) {
+    const d = new Date(timeEl[1]);
+    if (!isNaN(d.getTime())) return d;
+  }
+
   return null;
 }
 

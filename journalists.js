@@ -29,7 +29,6 @@ module.exports = [
   { name: 'Joshua Green', publication: 'Bloomberg' },
   { name: 'Gabriel Debenedetti', publication: 'New York Magazine' },
   { name: 'Edward-Isaac Dovere', publication: 'CNN' },
-  { name: 'Nate Silver', publication: 'Silver Bulletin' },
   { name: 'Joseph Bernstein', publication: 'New York Times' },
   // Added round 4
   { name: 'Erik Wemple', publication: 'New York Times' },
