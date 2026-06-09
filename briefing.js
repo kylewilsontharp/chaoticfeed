@@ -60,7 +60,7 @@ function buildEmailHTML(journalistArticles, chaosArticles, dateStr, total) {
 
   <div style="background:#419EFF;padding:24px 32px 28px;border-radius:8px 8px 0 0;">
     <div style="display:flex;align-items:center;gap:14px;">
-      <img src="https://www.chaoticera.news/logo.png" alt="Chaotic Era" width="52" height="52" style="display:block;border-radius:10px;flex-shrink:0;">
+      <img src="https://github.com/user-attachments/assets/d18bc2c9-09a0-4ffd-b91e-28c8b0a2512c" alt="Chaotic Era" width="52" height="52" style="display:block;border-radius:10px;flex-shrink:0;">
       <div>
         <div style="font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:0.15em;color:rgba(255,255,255,0.75);margin-bottom:8px;">Chaotic Era</div>
         <h1 style="margin:0 0 5px;font-size:26px;font-weight:700;color:#ffffff;letter-spacing:-0.02em;font-family:'IBM Plex Serif',Georgia,serif;">Extra Chaotic</h1>
