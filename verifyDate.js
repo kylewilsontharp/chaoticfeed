@@ -2,7 +2,19 @@ const https = require('https');
 const http = require('http');
 const { URL } = require('url');
 
-const BLOCKED_DOMAINS = /\bmsn\.com\b/i;
+const BLOCKED_DOMAINS = [
+  /\bmsn\.com\b/i,
+  /\bmiddle-?east-?online\.com\b/i,
+  /\basiae\.co\.kr\b/i,
+  /\bindiatimes\.com\b/i,
+  /\bnorthdakotamonitor\.com\b/i,
+  /\bbrennancenter\.org\b/i,
+  /\.co\.kr(\/|$)/i,
+  /\.co\.in(\/|$)/i,
+  /\.com\.au(\/|$)/i,
+  /\.co\.za(\/|$)/i,
+  /\.com\.br(\/|$)/i,
+];
 
 function fetchPage(rawUrl, maxRedirects = 6, timeout = 5000) {
   return new Promise((resolve, reject) => {
@@ -11,7 +23,7 @@ function fetchPage(rawUrl, maxRedirects = 6, timeout = 5000) {
       try { parsed = new URL(url); } catch (e) { return reject(e); }
 
       // Bail out early if we've landed on a blocked domain mid-redirect
-      if (BLOCKED_DOMAINS.test(parsed.hostname)) {
+      if (BLOCKED_DOMAINS.some(p => p.test(url))) {
         return resolve({ html: '', finalUrl: url, blocked: true });
       }
 
@@ -106,7 +118,7 @@ async function isArticleRecent(url, maxAgeDays) {
     const { html, finalUrl, blocked } = await fetchPage(url);
 
     // Exclude blocked domains regardless of date
-    if (blocked || BLOCKED_DOMAINS.test(finalUrl)) return false;
+    if (blocked || BLOCKED_DOMAINS.some(p => p.test(finalUrl))) return false;
 
     const date = extractDateFromHtml(html);
     if (!date) return true; // can't determine date — keep the article

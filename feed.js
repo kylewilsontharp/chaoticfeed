@@ -47,8 +47,23 @@ function normalizeTitle(t) {
   return t.toLowerCase().replace(/[^a-z0-9\s]/g, '').replace(/\s+/g, ' ').trim();
 }
 
-function isMsnUrl(url) {
-  return /\bmsn\.com\b/i.test(url);
+const BLOCKED_URL_PATTERNS = [
+  /\bmsn\.com\b/i,
+  /\bmiddle-?east-?online\.com\b/i,
+  /\basiae\.co\.kr\b/i,
+  /\bindiatimes\.com\b/i,           // covers hrsea.economictimes.indiatimes.com etc.
+  /\bnorthdakotamonitor\.com\b/i,
+  /\bbrennancenter\.org\b/i,
+  // Non-US country-code TLDs that produce irrelevant international content
+  /\.co\.kr(\/|$)/i,
+  /\.co\.in(\/|$)/i,
+  /\.com\.au(\/|$)/i,
+  /\.co\.za(\/|$)/i,
+  /\.com\.br(\/|$)/i,
+];
+
+function isBlockedUrl(url) {
+  return BLOCKED_URL_PATTERNS.some(p => p.test(url));
 }
 
 // Applies to all feeds
@@ -98,7 +113,7 @@ async function fetchArticlesForAuthor(author) {
     const pubDate = new Date(item.pubDate);
     if (isNaN(pubDate.getTime()) || pubDate < sevenDaysAgo) continue;
     const rawUrl = item.link || '';
-    if (isMsnUrl(rawUrl)) continue;
+    if (isBlockedUrl(rawUrl)) continue;
     const title = cleanTitle(item.title || 'Untitled');
     if (isExcluded(title)) continue;
     articles.push({
@@ -200,7 +215,7 @@ async function fetchTopicArticles(seenUrls = new Set(), seenTitles = new Set()) 
         const pubDate = new Date(item.pubDate);
         if (isNaN(pubDate.getTime()) || pubDate < twoDaysAgo) continue;
         const rawUrl = item.link || '';
-        if (isMsnUrl(rawUrl)) continue;
+        if (isBlockedUrl(rawUrl)) continue;
         const source = extractSource(item.title || '');
         const title = cleanTitle(item.title || 'Untitled');
         if (isExcluded(title) || isExcludedFromChaos(title, source)) continue;
@@ -275,7 +290,7 @@ async function fetchOpinionArticles(seenUrls = new Set(), seenTitles = new Set()
         const pubDate = new Date(item.pubDate);
         if (isNaN(pubDate.getTime()) || pubDate < twoDaysAgo) continue;
         const rawUrl = item.link || '';
-        if (isMsnUrl(rawUrl)) continue;
+        if (isBlockedUrl(rawUrl)) continue;
         const source = extractSource(item.title || '');
         const title = cleanTitle(item.title || 'Untitled');
         if (!isOpinionPiece(item, title)) continue;
