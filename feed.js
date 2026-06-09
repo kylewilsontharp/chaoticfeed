@@ -164,6 +164,13 @@ const CHAOS_QUERIES = [
   '"ActBlue"',
   '"Future Forward"',
   '"Data for Progress"',
+  '"Chauncey McLean"',
+  '"Joel Riter"',
+  '"David Shor"',
+  '"Rob Flaherty"',
+  '"More Perfect Union"',
+  '"Faiz Shakir"',
+  '"Mike Casca"',
 ];
 
 const OUTLET_PRIORITY = new Map([
