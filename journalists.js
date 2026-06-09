@@ -1,4 +1,5 @@
 module.exports = [
+  // Original roster
   { name: 'Max Tani', publication: 'Semafor' },
   { name: 'Theodore Schleifer', publication: 'New York Times' },
   { name: 'Taylor Lorenz', publication: 'UserMag' },
@@ -9,4 +10,36 @@ module.exports = [
   { name: 'Oliver Darcy', publication: 'Status' },
   { name: 'Peter Hamby', publication: 'Puck' },
   { name: 'Jessica Testa', publication: 'New York Times' },
+  // Added round 2
+  { name: 'Dave Weigel', publication: 'Semafor' },
+  { name: 'Jonathan Martin', publication: 'POLITICO' },
+  { name: 'Lauren Egan', publication: 'The Bulwark' },
+  { name: 'Will Sommer', publication: 'The Bulwark' },
+  { name: 'Sam Stein', publication: 'The Bulwark' },
+  { name: 'Issie Lapowsky', publication: 'Freelance' },
+  { name: 'Zach Montellaro', publication: 'POLITICO' },
+  { name: 'Ben Smith', publication: 'Semafor' },
+  { name: 'Jessica Piper', publication: 'POLITICO' },
+  { name: 'Elena Schneider', publication: 'NOTUS' },
+  { name: 'Nancy Scola', publication: 'Freelance' },
+  { name: 'Adam Wren', publication: 'POLITICO' },
+  { name: 'Michael Scherer', publication: 'The Atlantic' },
+  // Added round 3
+  { name: 'Alex Roarty', publication: 'NOTUS' },
+  { name: 'Joshua Green', publication: 'Bloomberg' },
+  { name: 'Gabriel Debenedetti', publication: 'New York Magazine' },
+  { name: 'Edward-Isaac Dovere', publication: 'CNN' },
+  { name: 'Joseph Bernstein', publication: 'New York Times' },
+  // Added round 4
+  { name: 'Erik Wemple', publication: 'New York Times' },
+  { name: 'Ben Mullin', publication: 'New York Times' },
+  { name: 'Katie Robertson', publication: 'New York Times' },
+  { name: 'Andrew Marantz', publication: 'The New Yorker' },
+  { name: 'Max Greenwood', publication: 'Campaigns & Elections' },
+  { name: 'Casey Newton', publication: 'Platformer' },
+  // Added round 5
+  { name: 'Natalie Korach', publication: 'Status' },
+  { name: 'Jon Passantino', publication: 'Status' },
+  { name: 'Ken Bensinger', publication: 'New York Times' },
+  { name: 'Brian Stelter', publication: 'CNN' },
 ];
