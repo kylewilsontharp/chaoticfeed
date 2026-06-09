@@ -58,10 +58,15 @@ function buildEmailHTML(journalistArticles, chaosArticles, dateStr, total) {
 <body style="margin:0;padding:0;background:#f4f4f5;font-family:'Inter',system-ui,-apple-system,sans-serif;">
 <div style="max-width:600px;margin:0 auto;padding:24px 16px;">
 
-  <div style="background:#419EFF;padding:28px 32px;border-radius:8px 8px 0 0;">
-    <div style="font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:0.15em;color:rgba(255,255,255,0.75);margin-bottom:10px;">Chaotic Era</div>
-    <h1 style="margin:0 0 6px;font-size:26px;font-weight:700;color:#ffffff;letter-spacing:-0.02em;font-family:'IBM Plex Serif',Georgia,serif;">Extra Chaotic</h1>
-    <p style="margin:0;font-size:13px;color:rgba(255,255,255,0.85);">${esc(dateStr)}&nbsp;&middot;&nbsp;${total} ${total === 1 ? 'story' : 'stories'} from tracked journalists</p>
+  <div style="background:#419EFF;padding:24px 32px 28px;border-radius:8px 8px 0 0;">
+    <div style="display:flex;align-items:center;gap:14px;">
+      <img src="https://www.chaoticera.news/logo.png" alt="Chaotic Era" width="52" height="52" style="display:block;border-radius:10px;flex-shrink:0;">
+      <div>
+        <div style="font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:0.15em;color:rgba(255,255,255,0.75);margin-bottom:8px;">Chaotic Era</div>
+        <h1 style="margin:0 0 5px;font-size:26px;font-weight:700;color:#ffffff;letter-spacing:-0.02em;font-family:'IBM Plex Serif',Georgia,serif;">Extra Chaotic</h1>
+        <p style="margin:0;font-size:13px;color:rgba(255,255,255,0.85);">${esc(dateStr)}&nbsp;&middot;&nbsp;${total} ${total === 1 ? 'story' : 'stories'} from tracked journalists</p>
+      </div>
+    </div>
   </div>
 
   <div style="background:#ffffff;padding:28px 32px 20px;border-radius:0 0 8px 8px;border:1px solid #e4e4e7;border-top:0;">
