@@ -1,9 +1,7 @@
 name: Daily Briefing
 
 on:
-  schedule:
-    - cron: '0 11 * * *'  # 6:00 AM ET (7:00 AM during daylight saving time)
-  workflow_dispatch:       # Lets you trigger it manually from GitHub anytime
+  workflow_dispatch:  # Triggered by cron-job.org at 6am ET — no GitHub cron delay
 
 jobs:
   send-briefing:
