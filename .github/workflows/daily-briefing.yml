@@ -1,7 +1,9 @@
 name: Daily Briefing
 
 on:
-  workflow_dispatch:  # Triggered by cron-job.org at 6am ET — no GitHub cron delay
+  schedule:
+    - cron: '0 10 * * *'  # 6am EDT (10:00 UTC)
+  workflow_dispatch:
 
 jobs:
   send-briefing:
